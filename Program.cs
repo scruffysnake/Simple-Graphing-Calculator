@@ -43,6 +43,7 @@ class Program
             Raylib.BeginDrawing();
                 Raylib.ClearBackground(Color.Black);
                 DrawAxes(ref view);
+                DrawMousePosition(ref view);
 
                 // ImGui
                 rlImGui.Begin();
@@ -50,7 +51,7 @@ class Program
                     // Camera
                     ImGui.SetNextWindowPos(cameraDefaultPosition, ImGuiCond.FirstUseEver);
                     ImGui.SetNextWindowSize(cameraDefaultSize, ImGuiCond.FirstUseEver);
-                    ImGui.Begin("Camera", ImGuiWindowFlags.NoSavedSettings);
+                    ImGui.Begin("Viewport", ImGuiWindowFlags.NoSavedSettings);
                         ImGui.InputFloat2("Position", ref view.Target);
                         ImGui.SliderFloat("Zoom", ref view.Zoom, 10, 200);
                     ImGui.End();
@@ -88,12 +89,12 @@ class Program
         // Grid
         Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(RESOLUTION_X, RESOLUTION_Y), view);
         Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), view);
-        Vector2 nOfLines = new Vector2(bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
+        Vector2 nOfLines = bottomRight - topLeft;
 
         // Vertical
         int spacingX = (int)(RESOLUTION_X / nOfLines.X);
         int gridOffsetX = (int)axes.X % spacingX;
-        for (int i = 0; i < nOfLines.X; i++)
+        for (int i = 0; i < nOfLines.X + 1; i++)
         {
             int x = i * spacingX + gridOffsetX;
             Raylib.DrawLine(x, 0, x, RESOLUTION_Y, Color.DarkGray);
@@ -109,15 +110,15 @@ class Program
         // Horizontal
         int spacingY = (int)(RESOLUTION_Y / nOfLines.Y);
         int gridOffsetY = (int)axes.Y % spacingY;
-        for (int i = 0; i < nOfLines.Y; i++)
+        for (int i = 0; i < nOfLines.Y + 1; i++)
         {
             int y = i * spacingY + gridOffsetY;
             Raylib.DrawLine(0, y, RESOLUTION_X, y, Color.DarkGray);
 
             // Numbers
             if (view.Zoom < 75) continue;
-            string positionMarker = Math.Round(Raylib.GetScreenToWorld2D(new Vector2(0, y), view).Y + .1).ToString();
-            if (positionMarker == "0") continue;
+            string positionMarker = Convert.ToString(Math.Round(Raylib.GetScreenToWorld2D(new Vector2(0, y), view).Y + .1) * -1);
+            if (positionMarker == "-0") continue;
             int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).Y;
             Raylib.DrawText(positionMarker, (int)(axes.X + 5), y - markerOffset / 2 + 1, 20, Color.LightGray);
         }
@@ -125,5 +126,16 @@ class Program
         // Axes
         Raylib.DrawLine((int)axes.X, 0, (int)axes.X, RESOLUTION_Y, Color.LightGray);
         Raylib.DrawLine(0, (int)axes.Y, RESOLUTION_X, (int)axes.Y, Color.LightGray);
+    }
+    static void DrawMousePosition(ref Camera2D view)
+    {
+        Vector2 screenPos = Raylib.GetMousePosition();
+        Vector2 worldPos = Raylib.GetScreenToWorld2D(screenPos, view);
+
+        string coords = $"{Math.Round(worldPos.X, 1)}, {-Math.Round(worldPos.Y, 1)}";
+        int textWidth = Raylib.MeasureText(coords, 30);
+        int x = RESOLUTION_X - 5 - textWidth;
+
+        Raylib.DrawText(coords, x, RESOLUTION_Y - 30, 30, Color.LightGray);
     }
 }
