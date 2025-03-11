@@ -52,7 +52,7 @@ class Program
                     ImGui.SetNextWindowSize(cameraDefaultSize, ImGuiCond.FirstUseEver);
                     ImGui.Begin("Camera", ImGuiWindowFlags.NoSavedSettings);
                         ImGui.InputFloat2("Position", ref view.Target);
-                        ImGui.InputFloat("Zoom", ref view.Zoom);
+                        ImGui.SliderFloat("Zoom", ref view.Zoom, 10, 200);
                     ImGui.End();
 
                     // Functions
@@ -71,7 +71,7 @@ class Program
         // Zoom
         const float ZOOM_INCREMENT = 2.5f;
         view.Zoom += Raylib.GetMouseWheelMove() * ZOOM_INCREMENT;
-        if (view.Zoom < 0) view.Zoom = 1;
+        if (view.Zoom < 10) view.Zoom = 10;
 
         // Move
         if (Raylib.IsMouseButtonDown(MouseButton.Right))
@@ -97,6 +97,13 @@ class Program
         {
             int x = i * spacingX + gridOffsetX;
             Raylib.DrawLine(x, 0, x, RESOLUTION_Y, Color.DarkGray);
+
+            // Numbers
+            if (view.Zoom < 75) continue;
+            string positionMarker = Math.Round(Raylib.GetScreenToWorld2D(new Vector2(x, 0), view).X + .1).ToString();
+            if (positionMarker == "0") continue;
+            int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).X;
+            Raylib.DrawText(positionMarker, x - markerOffset / 2 - 1, (int)(axes.Y + 5), 20, Color.LightGray);
         }
 
         // Horizontal
@@ -106,6 +113,13 @@ class Program
         {
             int y = i * spacingY + gridOffsetY;
             Raylib.DrawLine(0, y, RESOLUTION_X, y, Color.DarkGray);
+
+            // Numbers
+            if (view.Zoom < 75) continue;
+            string positionMarker = Math.Round(Raylib.GetScreenToWorld2D(new Vector2(0, y), view).Y + .1).ToString();
+            if (positionMarker == "0") continue;
+            int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).Y;
+            Raylib.DrawText(positionMarker, (int)(axes.X + 5), y - markerOffset / 2 + 1, 20, Color.LightGray);
         }
 
         // Axes
