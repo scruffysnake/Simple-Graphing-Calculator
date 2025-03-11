@@ -50,7 +50,7 @@ class Program
                     // Camera
                     ImGui.SetNextWindowPos(cameraDefaultPosition, ImGuiCond.FirstUseEver);
                     ImGui.SetNextWindowSize(cameraDefaultSize, ImGuiCond.FirstUseEver);
-                    ImGui.Begin("Camera");
+                    ImGui.Begin("Camera", ImGuiWindowFlags.NoSavedSettings);
                         ImGui.InputFloat2("Position", ref view.Target);
                         ImGui.InputFloat("Zoom", ref view.Zoom);
                     ImGui.End();
@@ -69,7 +69,7 @@ class Program
     static void Input(ref Camera2D view)
     {
         // Zoom
-        const float ZOOM_INCREMENT = 5;
+        const float ZOOM_INCREMENT = 2.5f;
         view.Zoom += Raylib.GetMouseWheelMove() * ZOOM_INCREMENT;
         if (view.Zoom < 0) view.Zoom = 1;
 
