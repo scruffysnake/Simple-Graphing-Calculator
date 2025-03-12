@@ -40,6 +40,9 @@ namespace Simple_Graphing_Calculator
             Vector2 functionsDefaultPosition = new Vector2(60, 160);
             var functions = new List<(string, Vector3)>();
 
+            // Settings
+            Vector2 UtilsDefaultPosition = new Vector2(1600, 900);
+
             // Main Loop
             while (!Raylib.WindowShouldClose())
             {
@@ -69,6 +72,7 @@ namespace Simple_Graphing_Calculator
                         FunctionsWindow(ref functions);
 
                         // Settings
+                        ImGui.SetNextWindowPos(UtilsDefaultPosition, ImGuiCond.FirstUseEver);
                         UtilsWindow();
 
                     rlImGui.End();
@@ -151,8 +155,10 @@ namespace Simple_Graphing_Calculator
         static void CameraWindow(ref Camera2D view)
         {
             ImGui.Begin("Viewport", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
-                ImGui.InputFloat2("Position", ref view.Target);
-                ImGui.SliderFloat("Zoom", ref view.Zoom, 10, 200);
+                view.Target.Y *= -1;
+                ImGui.DragFloat2("Position", ref view.Target, .1f);
+                view.Target.Y *= -1;
+                ImGui.DragFloat("Zoom", ref view.Zoom, view.Zoom / 1000, 10);
                 if (ImGui.Button("Reset Zoom")) view.Zoom = 100;
                 ImGui.SameLine();
                 if (ImGui.Button("Reset Location")) view.Target = new Vector2(0, 0);
@@ -168,8 +174,10 @@ namespace Simple_Graphing_Calculator
                     ImGui.ColorEdit3("", ref currentFunc.colour, ImGuiColorEditFlags.NoInputs);
                     ImGui.PopID();
                     ImGui.SameLine();
+                    ImGui.Text("Y =");
+                    ImGui.SameLine();
                     ImGui.PushID(i);
-                    ImGui.InputText("= Y", ref currentFunc.func, 128);
+                    ImGui.InputText("##= Y", ref currentFunc.func, 128);
                     ImGui.PopID();
                     functions[i] = currentFunc;
                     ImGui.SameLine();
@@ -191,6 +199,12 @@ namespace Simple_Graphing_Calculator
                 List<IToken> tokens = Calculator.Tokenise(func.func);
                 Parser parser = new Parser(tokens);
                 IExpression parsedFunction = parser.parseArithmetic();
+
+                Color color = new Color(
+                    (int)(Math.Clamp(func.colour.X, 0, 1) * 255), 
+                    (int)(Math.Clamp(func.colour.Y, 0, 1) * 255), 
+                    (int)(Math.Clamp(func.colour.Z, 0, 1) * 255));
+
                 for (int i = 0; i < ResolutionX; i++)
                 {
                     double x = Raylib.GetScreenToWorld2D(new Vector2(i, 0), View).X;
@@ -202,18 +216,16 @@ namespace Simple_Graphing_Calculator
                     if (Evaluator.error) continue;
                     double y = Raylib.GetWorldToScreen2D(new Vector2(0, (float)realY), View).Y;
 
-                    Color color = new Color(
-                        func.colour.X * 255, 
-                        func.colour.Y * 255, 
-                        func.colour.Z * 255);
                     Raylib.DrawPixel(i, (int)y, color);
                 }
             }
         }
         static void UtilsWindow()
         {
+            const float SNAP_INTERVAL = 0.5f;
             ImGui.Begin("Settings", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
-                ImGui.SliderFloat("Ui scale", ref ImGui.GetIO().FontGlobalScale, .5f, 5);
+                ImGui.InputFloat("Ui scale", ref ImGui.GetIO().FontGlobalScale, SNAP_INTERVAL);
+                ImGui.GetIO().FontGlobalScale = ImGui.GetIO().FontGlobalScale < 1 ? 1 : ImGui.GetIO().FontGlobalScale;
             ImGui.End();
         }
     }
