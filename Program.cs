@@ -230,6 +230,7 @@ namespace Simple_Graphing_Calculator
             foreach (var func in functions)
             {
                 List<IToken> tokens = Calculator.Tokenise(func.func);
+                if (tokens.Contains(new Operator(Operators.ERR))) continue;
                 Parser parser = new Parser(tokens);
                 IExpression parsedFunction = parser.parse();
 
