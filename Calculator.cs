@@ -9,53 +9,38 @@ namespace Simple_Graphing_Calculator
         X, PI, E, LN, SIN, COS, TAN, ABS, CEIL, FLOOR
     }
     interface IToken {}
-    struct MathFunc : IToken
+    struct MathFunc(MathFuncs func) : IToken
     {
-        public MathFuncs func;
-        public MathFunc(MathFuncs func) => this.func = func;
+        public MathFuncs func = func;
     }
-    struct Number : IToken
+    struct Number(double value) : IToken
     {
-        public double value;
-        public Number(double value) => this.value = value;
+        public double value = value;
     }
-    struct Operator : IToken
+    struct Operator(Operators operatr) : IToken
     {
-        public Operators operatr;
-        public Operator(Operators operatr) => this.operatr = operatr;
+        public Operators operatr = operatr;
     }
 
     interface IExpression {}
-    internal class Value : IExpression
+    internal class Value(double value) : IExpression
     {
-        public double value;
-        public Value(double value) 
-        { 
-            this.value = value; 
-        }
+        public double value = value;
     }
-    internal class BinaryExpression : IExpression
+    internal class BinaryExpression(Operators operatr, IExpression left, IExpression right) : IExpression
     {
-        public Operators operatr; 
-        public IExpression left, right;
-        public BinaryExpression(Operators operatr, IExpression left, IExpression right) 
-        { 
-            this.operatr = operatr; 
-            this.left = left; 
-            this.right = right; 
-        }
+        public Operators operatr = operatr; 
+        public IExpression left = left, right = right;
     }
-    internal class UnaryExpression : IExpression
+    internal class UnaryExpression(Operators operatr, IExpression expr) : IExpression
     {
-        public Operators operatr; 
-        public IExpression expr;
-        public UnaryExpression(Operators operatr, IExpression expr) 
-        { 
-            this.operatr = operatr; 
-            this.expr = expr; 
-        }
+        public Operators operatr = operatr; 
+        public IExpression expr = expr;
     }
-    internal class XExpression : IExpression {}
+    internal class FuncExpression(MathFuncs func) : IExpression 
+    {
+        public MathFuncs func = func;
+    }
     internal class BrokenExpression : IExpression {}
 
     internal class Calculator
@@ -197,7 +182,7 @@ namespace Simple_Graphing_Calculator
             if (tokens[i] is MathFunc) 
             {
                 i++;
-                return new XExpression();
+                return new FuncExpression(MathFuncs.X);
             }   
 
             if (match(Operators.OPEN))
@@ -230,7 +215,7 @@ namespace Simple_Graphing_Calculator
             if (expr is Value val) return val.value;
             if (expr is BinaryExpression binary) return InterpretBinary(binary);
             if (expr is UnaryExpression unary) return InterpretUnary(unary);
-            if (expr is XExpression xExpresion) return x;
+            if (expr is FuncExpression) return x;
             error = true;
             return 0;
         }
