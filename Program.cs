@@ -28,6 +28,13 @@ namespace Simple_Graphing_Calculator
         static int ResolutionX = DEFAULT_RESOLUTION_X;
         static int ResolutionY = DEFAULT_RESOLUTION_Y;
 
+        static bool ShowGrid = true;
+        static bool ShowAxes = true;
+        static bool ShowAxesMarkers = true;
+
+        const int SAMPLES_PER_PIXEL = 8; // Supersampling
+        const int MAX_VERTICAL_JUMP_THRESHOLD = 25;
+
         public static void Main()
         {
             // Init
@@ -129,14 +136,17 @@ namespace Simple_Graphing_Calculator
             for (int i = 0; i < nOfLines.X + 1; i++)
             {
                 int x = i * spacingX + gridOffsetX;
-                Raylib.DrawLine(x, 0, x, ResolutionX, Color.DarkGray);
+                if (ShowGrid) Raylib.DrawLine(x, 0, x, ResolutionX, Color.DarkGray);
 
                 // Numbers
                 if (view.Zoom < 75) continue;
                 string positionMarker = Math.Round(Raylib.GetScreenToWorld2D(new Vector2(x, 0), view).X + .1).ToString();
-                if (positionMarker == "0") continue;
-                int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).X;
-                Raylib.DrawText(positionMarker, x - markerOffset / 2 - 1, (int)(axes.Y + 5), 20, Color.LightGray);
+                if (ShowAxesMarkers)
+                {
+                    if (positionMarker == "0") continue;
+                    int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).X;
+                    Raylib.DrawText(positionMarker, x - markerOffset / 2 - 1, (int)(axes.Y + 5), 20, Color.LightGray);
+                }
             }
 
             // Horizontal
@@ -145,17 +155,21 @@ namespace Simple_Graphing_Calculator
             for (int i = 0; i < nOfLines.Y + 1; i++)
             {
                 int y = i * spacingY + gridOffsetY;
-                Raylib.DrawLine(0, y, ResolutionX, y, Color.DarkGray);
+                if(ShowGrid) Raylib.DrawLine(0, y, ResolutionX, y, Color.DarkGray);
 
                 // Numbers
                 if (view.Zoom < 75) continue;
                 string positionMarker = Convert.ToString(Math.Round(Raylib.GetScreenToWorld2D(new Vector2(0, y), view).Y + .1) * -1);
-                if (positionMarker == "-0") continue;
-                int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).Y;
-                Raylib.DrawText(positionMarker, (int)(axes.X + 5), y - markerOffset / 2 + 1, 20, Color.LightGray);
+                if (ShowAxesMarkers)
+                {
+                    if (positionMarker == "-0") continue;
+                    int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).Y;
+                    Raylib.DrawText(positionMarker, (int)(axes.X + 5), y - markerOffset / 2 + 1, 20, Color.LightGray);
+                }
             }
 
             // Axes
+            if (!ShowAxes) return;
             Raylib.DrawLine((int)axes.X, 0, (int)axes.X, ResolutionY, Color.LightGray);
             Raylib.DrawLine(0, (int)axes.Y, ResolutionX, (int)axes.Y, Color.LightGray);
         }
@@ -223,19 +237,25 @@ namespace Simple_Graphing_Calculator
                     (int)(Math.Clamp(func.colour.Y, 0, 1) * 255), 
                     (int)(Math.Clamp(func.colour.Z, 0, 1) * 255));
 
-                int previousPositionY = 0;
-                for (int i = 0; i < ResolutionX; i++)
+                int previousPositionY = int.MinValue;
+                for (int i = 0; i < ResolutionX * SAMPLES_PER_PIXEL; i++)
                 {
-                    double x = Raylib.GetScreenToWorld2D(new Vector2(i, 0), View).X;
+                    double x = Raylib.GetScreenToWorld2D(new Vector2(i / SAMPLES_PER_PIXEL, 0), View).X;
 
                     Evaluator.Reset();
                     Evaluator.x = x;
                     double realY = - Evaluator.Interpret(parsedFunction);
 
-                    if (Evaluator.error) continue;
+                    if (Evaluator.error) 
+                    {
+                        previousPositionY = int.MaxValue;
+                        continue;
+                    }
                     double y = Raylib.GetWorldToScreen2D(new Vector2(0, (float)realY), View).Y;
 
-                    Raylib.DrawLine(i - 1, previousPositionY, i, (int)y, color);
+                    if (previousPositionY == int.MinValue) previousPositionY = (int)y;
+                    if (Math.Abs(previousPositionY - y) > MAX_VERTICAL_JUMP_THRESHOLD) previousPositionY = (int)y;
+                    Raylib.DrawLine((i - 1) / SAMPLES_PER_PIXEL, previousPositionY, i / SAMPLES_PER_PIXEL, (int)y, color);
                     previousPositionY = (int)y;
                 }
             }
@@ -254,8 +274,15 @@ namespace Simple_Graphing_Calculator
             float fontScale = ImGui.GetIO().FontGlobalScale * (CustomFont ? 6 : 1);
             if (fontScale == 0) fontScale = 1;
             ImGui.Begin("Settings", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
+            // Scale
                 ImGui.InputFloat("Ui scale", ref fontScale, SNAP_INTERVAL);
                 fontScale = fontScale < .5 ? .5f : fontScale;
+            // Grid
+                if (ImGui.Button("Toogle Grid")) ShowGrid ^= true;
+                ImGui.SameLine();
+                if (ImGui.Button("Toogle Axes")) ShowAxes ^= true;
+                ImGui.SameLine();
+                if (ImGui.Button("Toogle Axes Markers")) ShowAxesMarkers ^= true;
             ImGui.End();
             ImGui.GetIO().FontGlobalScale = fontScale / (CustomFont ? 6 : 1);
         }
