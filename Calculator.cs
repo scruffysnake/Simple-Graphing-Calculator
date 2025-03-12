@@ -2,10 +2,18 @@ namespace Simple_Graphing_Calculator
 {
     public enum Operators
     {
-        PLUS, MINUS, MULTIPLY, DIVIDE, POWER, OPEN, CLOSE, X, ERR, NULL
+        PLUS, MINUS, MULTIPLY, DIVIDE, POWER, OPEN, CLOSE, ERR, NULL
+    }
+    public enum MathFuncs
+    {
+        X, PI, E, LN, SIN, COS, TAN, ABS, CEIL, FLOOR
     }
     interface IToken {}
-    struct XVal : IToken {}
+    struct MathFunc : IToken
+    {
+        public MathFuncs func;
+        public MathFunc(MathFuncs func) => this.func = func;
+    }
     struct Number : IToken
     {
         public double value;
@@ -70,7 +78,7 @@ namespace Simple_Graphing_Calculator
                     case '(': tokens.Add(new Operator(Operators.OPEN)); break;
                     case ')': tokens.Add(new Operator(Operators.CLOSE)); break;
 
-                    case 'X': case 'x': tokens.Add(new XVal()); break;
+                    case 'X': case 'x': tokens.Add(new MathFunc(MathFuncs.X)); break;
 
                     default:
                         try { tokens.Add(new Number(Number(input, ref i))); }
@@ -186,7 +194,7 @@ namespace Simple_Graphing_Calculator
                 i++;
                 return new Value(n.value);
             }
-            if (tokens[i] is XVal) 
+            if (tokens[i] is MathFunc) 
             {
                 i++;
                 return new XExpression();
@@ -231,21 +239,19 @@ namespace Simple_Graphing_Calculator
             double left = Interpret(binary.left);
             double right = Interpret(binary.right);
 
-            double BinaryResult(Func<double, double, double> operation) => operation(left, right);
-
             switch (binary.operatr)
             {
-                case Operators.PLUS: return BinaryResult((l, r) => l + r);
-                case Operators.MINUS: return BinaryResult((l, r) => l - r);
-                case Operators.MULTIPLY: return BinaryResult((l, r) => l * r);
+                case Operators.PLUS: return left + right;
+                case Operators.MINUS: return left - right;
+                case Operators.MULTIPLY: return left * right;
                 case Operators.DIVIDE: 
                     if (right == 0) 
                     {
                         error = true;
                         return 0;
                     }
-                    return BinaryResult((l, r) => l / r);
-                case Operators.POWER: return BinaryResult((l, r) => Math.Pow(l, r));
+                    return left / right;
+                case Operators.POWER: return Math.Pow(left, right);
             }
             error = true;
             return 0;
