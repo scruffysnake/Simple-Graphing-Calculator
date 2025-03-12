@@ -15,16 +15,19 @@ namespace Simple_Graphing_Calculator
 {
     class Program
     {
-        const int RESOLUTION_X = 1920;
-        const int RESOLUTION_Y = 1080;
-        const float DEFAULT_ZOOM = 1080 / 10;
+        const int DEFAULT_RESOLUTION_X = 1920;
+        const int DEFAULT_RESOLUTION_Y = 1080;
+        const float DEFAULT_ZOOM = 100;
 
-        static Vector2 Offset = new Vector2(RESOLUTION_X / 2, RESOLUTION_Y / 2);
+        static Vector2 Offset = new Vector2(DEFAULT_RESOLUTION_X / 2, DEFAULT_RESOLUTION_Y / 2);
+        static int ResolutionX = DEFAULT_RESOLUTION_X;
+        static int ResolutionY = DEFAULT_RESOLUTION_Y;
 
         public static void Main()
         {
             // Init
-            Raylib.InitWindow(RESOLUTION_X, RESOLUTION_Y, "Simple Graphing Calculator");
+            Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
+            Raylib.InitWindow(DEFAULT_RESOLUTION_X, DEFAULT_RESOLUTION_Y, "Simple Graphing Calculator");
             Raylib.SetTargetFPS(144);
             rlImGui.Setup();
 
@@ -34,12 +37,16 @@ namespace Simple_Graphing_Calculator
             Vector2 cameraDefaultPosition = new Vector2(60, 60);
 
             // Functions
-            Vector2 functionsDefaultPosition = new Vector2(60, 140);
+            Vector2 functionsDefaultPosition = new Vector2(60, 160);
             var functions = new List<(string, Vector3)>();
 
             // Main Loop
             while (!Raylib.WindowShouldClose())
             {
+                ResolutionX = Raylib.GetRenderWidth();
+                ResolutionY = Raylib.GetRenderHeight();
+                Offset = new Vector2(ResolutionX / 2, ResolutionY / 2);
+
                 // Input
                 Input(ref view);
 
@@ -55,14 +62,14 @@ namespace Simple_Graphing_Calculator
 
                         // Camera
                         ImGui.SetNextWindowPos(cameraDefaultPosition, ImGuiCond.FirstUseEver);
-                        ImGui.Begin("Viewport", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
-                            ImGui.InputFloat2("Position", ref view.Target);
-                            ImGui.SliderFloat("Zoom", ref view.Zoom, 10, 200);
-                        ImGui.End();
+                        CameraWindow(ref view);
 
                         // Functions
                         ImGui.SetNextWindowPos(functionsDefaultPosition, ImGuiCond.FirstUseEver);
                         FunctionsWindow(ref functions);
+
+                        // Settings
+                        UtilsWindow();
 
                     rlImGui.End();
                 Raylib.EndDrawing();
@@ -90,17 +97,17 @@ namespace Simple_Graphing_Calculator
             Vector2 axes = Raylib.GetWorldToScreen2D(new Vector2(0, 0), view);
 
             // Grid
-            Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(RESOLUTION_X, RESOLUTION_Y), view);
+            Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(ResolutionX, ResolutionY), view);
             Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), view);
             Vector2 nOfLines = bottomRight - topLeft;
 
             // Vertical
-            int spacingX = (int)(RESOLUTION_X / nOfLines.X);
+            int spacingX = (int)(ResolutionX / nOfLines.X);
             int gridOffsetX = (int)axes.X % spacingX;
             for (int i = 0; i < nOfLines.X + 1; i++)
             {
                 int x = i * spacingX + gridOffsetX;
-                Raylib.DrawLine(x, 0, x, RESOLUTION_Y, Color.DarkGray);
+                Raylib.DrawLine(x, 0, x, ResolutionX, Color.DarkGray);
 
                 // Numbers
                 if (view.Zoom < 75) continue;
@@ -111,12 +118,12 @@ namespace Simple_Graphing_Calculator
             }
 
             // Horizontal
-            int spacingY = (int)(RESOLUTION_Y / nOfLines.Y);
+            int spacingY = (int)(ResolutionY / nOfLines.Y);
             int gridOffsetY = (int)axes.Y % spacingY;
             for (int i = 0; i < nOfLines.Y + 1; i++)
             {
                 int y = i * spacingY + gridOffsetY;
-                Raylib.DrawLine(0, y, RESOLUTION_X, y, Color.DarkGray);
+                Raylib.DrawLine(0, y, ResolutionX, y, Color.DarkGray);
 
                 // Numbers
                 if (view.Zoom < 75) continue;
@@ -127,8 +134,8 @@ namespace Simple_Graphing_Calculator
             }
 
             // Axes
-            Raylib.DrawLine((int)axes.X, 0, (int)axes.X, RESOLUTION_Y, Color.LightGray);
-            Raylib.DrawLine(0, (int)axes.Y, RESOLUTION_X, (int)axes.Y, Color.LightGray);
+            Raylib.DrawLine((int)axes.X, 0, (int)axes.X, ResolutionY, Color.LightGray);
+            Raylib.DrawLine(0, (int)axes.Y, ResolutionX, (int)axes.Y, Color.LightGray);
         }
         static void DrawMousePosition(ref Camera2D view)
         {
@@ -137,9 +144,19 @@ namespace Simple_Graphing_Calculator
 
             string coords = $"{Math.Round(worldPos.X, 1)}, {-Math.Round(worldPos.Y, 1)}";
             int textWidth = Raylib.MeasureText(coords, 30);
-            int x = RESOLUTION_X - 5 - textWidth;
+            int x = ResolutionX - 5 - textWidth;
 
-            Raylib.DrawText(coords, x, RESOLUTION_Y - 30, 30, Color.LightGray);
+            Raylib.DrawText(coords, x, ResolutionY - 30, 30, Color.LightGray);
+        }
+        static void CameraWindow(ref Camera2D view)
+        {
+            ImGui.Begin("Viewport", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
+                ImGui.InputFloat2("Position", ref view.Target);
+                ImGui.SliderFloat("Zoom", ref view.Zoom, 10, 200);
+                if (ImGui.Button("Reset Zoom")) view.Zoom = 100;
+                ImGui.SameLine();
+                if (ImGui.Button("Reset Location")) view.Target = new Vector2(0, 0);
+            ImGui.End();
         }
         static void FunctionsWindow(ref List<(string func, Vector3 colour)> functions)
         {
@@ -174,7 +191,7 @@ namespace Simple_Graphing_Calculator
                 List<IToken> tokens = Calculator.Tokenise(func.func);
                 Parser parser = new Parser(tokens);
                 IExpression parsedFunction = parser.parseArithmetic();
-                for (int i = 0; i < RESOLUTION_X; i++)
+                for (int i = 0; i < ResolutionX; i++)
                 {
                     double x = Raylib.GetScreenToWorld2D(new Vector2(i, 0), View).X;
 
@@ -190,6 +207,12 @@ namespace Simple_Graphing_Calculator
                     Raylib.DrawPixel(i, (int)y, color);
                 }
             }
+        }
+        static void UtilsWindow()
+        {
+            ImGui.Begin("Settings", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
+                ImGui.SliderFloat("Ui scale", ref ImGui.GetIO().FontGlobalScale, .5f, 5);
+            ImGui.End();
         }
     }
 }
