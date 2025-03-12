@@ -181,6 +181,8 @@ namespace Simple_Graphing_Calculator
                     Evaluator.Reset();
                     Evaluator.x = x;
                     double realY = - Evaluator.Interpret(parsedFunction);
+
+                    if (Evaluator.error) continue;
                     double y = Raylib.GetWorldToScreen2D(new Vector2(0, (float)realY), View).Y;
 
                     Color color = new Color(
