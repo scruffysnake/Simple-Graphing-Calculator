@@ -32,8 +32,9 @@ namespace Simple_Graphing_Calculator
         static bool ShowAxes = true;
         static bool ShowAxesMarkers = true;
 
-        const int SAMPLES_PER_PIXEL = 8; // Supersampling
-        const int MAX_VERTICAL_JUMP_THRESHOLD = 25;
+        static int SamplesPerPixel = 8; // MultiSampling
+        static int MaxVerticalJumpThreshold = 5;
+        static int MaxVerticalJumpThresholdNoFloorOrCeil = 400;
 
         public static void Main()
         {
@@ -65,7 +66,7 @@ namespace Simple_Graphing_Calculator
             var functions = new List<(string, Vector3)>();
 
             // Settings
-            Vector2 UtilsDefaultPosition = new Vector2(1400, 900);
+            Vector2 UtilsDefaultPosition = new Vector2(1200, 800);
 
             // Main Loop
             while (!Raylib.WindowShouldClose())
@@ -221,7 +222,7 @@ namespace Simple_Graphing_Calculator
                     }
                     ImGui.PopID();
                 }
-                if (ImGui.Button("Add Function")) functions.Add(("", new Vector3(255, 255, 255)));
+                if (ImGui.Button("Add Function")) functions.Add(("", new Vector3(1, 1, 1)));
             ImGui.End();
         }
         static void DrawFunctions(ref Camera2D View, List<(string func, Vector3 colour)> functions)
@@ -237,10 +238,11 @@ namespace Simple_Graphing_Calculator
                     (int)(Math.Clamp(func.colour.Y, 0, 1) * 255), 
                     (int)(Math.Clamp(func.colour.Z, 0, 1) * 255));
 
-                int previousPositionY = int.MinValue;
-                for (int i = 0; i < ResolutionX * SAMPLES_PER_PIXEL; i++)
+                double previousPositionY = 0;
+                bool firstPoint = true;
+                for (int i = 0; i < ResolutionX * SamplesPerPixel; i++)
                 {
-                    double x = Raylib.GetScreenToWorld2D(new Vector2(i / SAMPLES_PER_PIXEL, 0), View).X;
+                    double x = Raylib.GetScreenToWorld2D(new Vector2(i / SamplesPerPixel, 0), View).X;
 
                     Evaluator.Reset();
                     Evaluator.x = x;
@@ -248,15 +250,27 @@ namespace Simple_Graphing_Calculator
 
                     if (Evaluator.error) 
                     {
-                        previousPositionY = int.MaxValue;
+                        firstPoint = true;
                         continue;
                     }
                     double y = Raylib.GetWorldToScreen2D(new Vector2(0, (float)realY), View).Y;
 
-                    if (previousPositionY == int.MinValue) previousPositionY = (int)y;
-                    if (Math.Abs(previousPositionY - y) > MAX_VERTICAL_JUMP_THRESHOLD) previousPositionY = (int)y;
-                    Raylib.DrawLine((i - 1) / SAMPLES_PER_PIXEL, previousPositionY, i / SAMPLES_PER_PIXEL, (int)y, color);
-                    previousPositionY = (int)y;
+                    if (firstPoint) previousPositionY = (int)y;
+                    if (!firstPoint)
+                    {
+                        if (Math.Abs(previousPositionY - y) > 
+                            (Evaluator.floorOrCeil ? MaxVerticalJumpThreshold : MaxVerticalJumpThresholdNoFloorOrCeil))
+                        {
+                            Evaluator.x = Raylib.GetScreenToWorld2D(new Vector2((i + .5f) / SamplesPerPixel, 0), View).X;
+                            double realY2 = - Evaluator.Interpret(parsedFunction);
+                            double y2 = Raylib.GetWorldToScreen2D(new Vector2(0, (float)realY2), View).Y;
+                            if (Math.Abs(y - previousPositionY) >= Math.Abs(y - y2)) previousPositionY = (int)y;
+                            Evaluator.x = x;
+                        }
+                    }
+                    Raylib.DrawLine((i - 1) / SamplesPerPixel, (int)previousPositionY, i / SamplesPerPixel, (int)y, color);
+                    previousPositionY = y;
+                    firstPoint = false;
                 }
             }
         }
@@ -283,6 +297,9 @@ namespace Simple_Graphing_Calculator
                 if (ImGui.Button("Toogle Axes")) ShowAxes ^= true;
                 ImGui.SameLine();
                 if (ImGui.Button("Toogle Axes Markers")) ShowAxesMarkers ^= true;
+                ImGui.InputInt("Samples Per Pixel", ref SamplesPerPixel);
+                ImGui.InputInt("Max Vertical Jump Threshold Floor and Ceil", ref MaxVerticalJumpThreshold);
+                ImGui.InputInt("Max Vertical Jump Threshold", ref MaxVerticalJumpThresholdNoFloorOrCeil);
             ImGui.End();
             ImGui.GetIO().FontGlobalScale = fontScale / (CustomFont ? 6 : 1);
         }

@@ -271,10 +271,12 @@ namespace Simple_Graphing_Calculator
     {
         public static double x;
         public static bool error;
+        public static bool floorOrCeil;
 
         public static void Reset()
         {
             error = false;
+            floorOrCeil = false;
         }
 
         public static double Interpret(IExpression expr)
@@ -301,8 +303,16 @@ namespace Simple_Graphing_Calculator
                     case MathFuncs.SIN: return Math.Sin(Interpret(func.func));
                     case MathFuncs.COS: return Math.Cos(Interpret(func.func));
                     case MathFuncs.TAN: return Math.Tan(Interpret(func.func));
-                    case MathFuncs.CEIL: return Math.Ceiling(Interpret(func.func));
-                    case MathFuncs.FLOOR: return Math.Floor(Interpret(func.func));
+                    case MathFuncs.CEIL: 
+                    {
+                        floorOrCeil = true;
+                        return Math.Ceiling(Interpret(func.func));
+                    }
+                    case MathFuncs.FLOOR: 
+                    {
+                        floorOrCeil = true;
+                        return Math.Floor(Interpret(func.func));
+                    }
                 }
             }
             error = true;
