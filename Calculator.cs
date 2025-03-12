@@ -200,7 +200,28 @@ namespace Simple_Graphing_Calculator
             return expr;
         }
 
-        public IExpression parseArithmetic() => parseBinary(parseMultiplicative, Operators.MINUS, Operators.PLUS);
+        public IExpression parse()
+        {
+            static bool RequiresImplicitMultiply(IToken a, IToken b)
+            {
+                bool aIsPrimary = a is Number ||
+                                (a is MathFunc mfA && (mfA.type == MathFuncs.X || mfA.type == MathFuncs.PI || mfA.type == MathFuncs.E)) ||
+                                (a is Operator opA && (opA.operatr == Operators.CLOSE || opA.operatr == Operators.ABS));
+
+                bool bIsPrimary = b is Number ||
+                                (b is MathFunc) ||
+                                (b is Operator opB && (opB.operatr == Operators.OPEN || opB.operatr == Operators.ABS));
+
+                return aIsPrimary && bIsPrimary;
+            }
+
+            for (int i = 1; i < tokens.Count; i++)
+            {
+                if (RequiresImplicitMultiply(tokens[i - 1], tokens[i])) tokens.Insert(i, new Operator(Operators.MULTIPLY));
+            }
+            return parseArithmetic();
+        }
+        private IExpression parseArithmetic() => parseBinary(parseMultiplicative, Operators.MINUS, Operators.PLUS);
         private IExpression parseMultiplicative() => parseBinary(parseIndices, Operators.DIVIDE, Operators.MULTIPLY);
         private IExpression parseIndices() => parseBinary(parseUnary, Operators.POWER);
 
@@ -243,7 +264,7 @@ namespace Simple_Graphing_Calculator
 
             if (match(Operators.OPEN))
             {
-                IExpression expr = parseArithmetic();
+                IExpression expr = parse();
                 if (i >= tokens.Count)
                 {
                     isBroken = true;
@@ -254,7 +275,7 @@ namespace Simple_Graphing_Calculator
             }
             if (match(Operators.ABS))
             {
-                IExpression expr = parseArithmetic();
+                IExpression expr = parse();
                 if (i >= tokens.Count)
                 {
                     isBroken = true;

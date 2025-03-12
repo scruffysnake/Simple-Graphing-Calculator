@@ -231,7 +231,7 @@ namespace Simple_Graphing_Calculator
             {
                 List<IToken> tokens = Calculator.Tokenise(func.func);
                 Parser parser = new Parser(tokens);
-                IExpression parsedFunction = parser.parseArithmetic();
+                IExpression parsedFunction = parser.parse();
 
                 Color color = new Color(
                     (int)(Math.Clamp(func.colour.X, 0, 1) * 255), 
