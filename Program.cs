@@ -2,6 +2,7 @@
 using ImGuiNET;
 using rlImGui_cs;
 using System.Numerics;
+using System.Text.RegularExpressions;
 
 /*
     Naming convensions:
@@ -15,6 +16,10 @@ namespace Simple_Graphing_Calculator
 {
     class Program
     {
+        const string FONT_PATH = "SpaceMono-Regular.ttf";
+        const int FONT_SIZE = 117;
+        static bool CustomFont = false;
+
         const int DEFAULT_RESOLUTION_X = 1920;
         const int DEFAULT_RESOLUTION_Y = 1080;
         const float DEFAULT_ZOOM = 100;
@@ -31,24 +36,36 @@ namespace Simple_Graphing_Calculator
             Raylib.SetTargetFPS(144);
             rlImGui.Setup();
 
+            // Font
+            ImGuiIOPtr io = ImGui.GetIO();
+            if (File.Exists(FONT_PATH))
+            {
+                io.Fonts.Clear();
+                io.Fonts.AddFontFromFileTTF(FONT_PATH, FONT_SIZE, null, ImGui.GetIO().Fonts.GetGlyphRangesGreek());
+                io.Fonts.Build();
+                rlImGui.ReloadFonts();
+                ImGui.GetIO().FontGlobalScale = 0;
+                CustomFont = true;
+            }
+
             // Camera
             Vector2 targetDefault = new Vector2(0, 0);
             Camera2D view = new Camera2D(Offset, targetDefault, 0, DEFAULT_ZOOM);
             Vector2 cameraDefaultPosition = new Vector2(60, 60);
 
             // Functions
-            Vector2 functionsDefaultPosition = new Vector2(60, 160);
+            Vector2 functionsDefaultPosition = new Vector2(60, 200);
             var functions = new List<(string, Vector3)>();
 
             // Settings
-            Vector2 UtilsDefaultPosition = new Vector2(1600, 900);
+            Vector2 UtilsDefaultPosition = new Vector2(1400, 900);
 
             // Main Loop
             while (!Raylib.WindowShouldClose())
             {
                 ResolutionX = Raylib.GetRenderWidth();
                 ResolutionY = Raylib.GetRenderHeight();
-                Offset = new Vector2(ResolutionX / 2, ResolutionY / 2);
+                view.Offset = new Vector2(ResolutionX / 2, ResolutionY / 2);
 
                 // Input
                 Input(ref view);
@@ -57,6 +74,7 @@ namespace Simple_Graphing_Calculator
                 Raylib.BeginDrawing();
                     Raylib.ClearBackground(Color.Black);
                     DrawAxes(ref view);
+                    EditFunctions(ref functions);
                     DrawFunctions(ref view, functions);
                     DrawMousePosition(ref view);
 
@@ -89,7 +107,7 @@ namespace Simple_Graphing_Calculator
             if (view.Zoom < 10) view.Zoom = 10;
 
             // Move
-            if (Raylib.IsMouseButtonDown(MouseButton.Right))
+            if (Raylib.IsMouseButtonDown(MouseButton.Right) || Raylib.IsMouseButtonDown(MouseButton.Middle))
             {
                 Vector2 mouseDelta = Raylib.GetMouseDelta() * (-1 / view.Zoom);
                 view.Target += mouseDelta;
@@ -205,6 +223,7 @@ namespace Simple_Graphing_Calculator
                     (int)(Math.Clamp(func.colour.Y, 0, 1) * 255), 
                     (int)(Math.Clamp(func.colour.Z, 0, 1) * 255));
 
+                int previousPositionY = 0;
                 for (int i = 0; i < ResolutionX; i++)
                 {
                     double x = Raylib.GetScreenToWorld2D(new Vector2(i, 0), View).X;
@@ -216,17 +235,29 @@ namespace Simple_Graphing_Calculator
                     if (Evaluator.error) continue;
                     double y = Raylib.GetWorldToScreen2D(new Vector2(0, (float)realY), View).Y;
 
-                    Raylib.DrawPixel(i, (int)y, color);
+                    Raylib.DrawLine(i - 1, previousPositionY, i, (int)y, color);
+                    previousPositionY = (int)y;
                 }
+            }
+        }
+        static void EditFunctions(ref List<(string func, Vector3 colour)> functions)
+        {
+            for (int i = 0; i < functions.Count; i++)
+            {
+                string func = Regex.Replace(functions[i].func, @"pi", "π", RegexOptions.IgnoreCase);
+                functions[i] = (func , functions[i].colour);
             }
         }
         static void UtilsWindow()
         {
             const float SNAP_INTERVAL = 0.5f;
+            float fontScale = ImGui.GetIO().FontGlobalScale * (CustomFont ? 6 : 1);
+            if (fontScale == 0) fontScale = 1;
             ImGui.Begin("Settings", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
-                ImGui.InputFloat("Ui scale", ref ImGui.GetIO().FontGlobalScale, SNAP_INTERVAL);
-                ImGui.GetIO().FontGlobalScale = ImGui.GetIO().FontGlobalScale < 1 ? 1 : ImGui.GetIO().FontGlobalScale;
+                ImGui.InputFloat("Ui scale", ref fontScale, SNAP_INTERVAL);
+                fontScale = fontScale < .5 ? .5f : fontScale;
             ImGui.End();
+            ImGui.GetIO().FontGlobalScale = fontScale / (CustomFont ? 6 : 1);
         }
     }
 }

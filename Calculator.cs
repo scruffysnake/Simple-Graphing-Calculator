@@ -2,16 +2,16 @@ namespace Simple_Graphing_Calculator
 {
     public enum Operators
     {
-        PLUS, MINUS, MULTIPLY, DIVIDE, POWER, OPEN, CLOSE, ERR, NULL
+        PLUS, MINUS, MULTIPLY, DIVIDE, POWER, OPEN, CLOSE, ABS, ERR, NULL
     }
     public enum MathFuncs
     {
-        X, PI, E, LN, SIN, COS, TAN, ABS, CEIL, FLOOR
+        X, PI, E, LN, LOG, SIN, COS, TAN, CEIL, FLOOR
     }
     interface IToken {}
-    struct MathFunc(MathFuncs func) : IToken
+    struct MathFunc(MathFuncs type) : IToken
     {
-        public MathFuncs func = func;
+        public MathFuncs type = type;
     }
     struct Number(double value) : IToken
     {
@@ -37,9 +37,18 @@ namespace Simple_Graphing_Calculator
         public Operators operatr = operatr; 
         public IExpression expr = expr;
     }
-    internal class FuncExpression(MathFuncs func) : IExpression 
+    internal class VarExpression(MathFuncs type) : IExpression 
     {
-        public MathFuncs func = func;
+        public MathFuncs type = type;
+    }
+    internal class FuncExpression(MathFuncs type, IExpression func) : IExpression 
+    {
+        public MathFuncs type = type;
+        public IExpression func = func;
+    }
+    internal class AbsExpression(IExpression expr) : IExpression
+    {
+        public IExpression expr = expr;
     }
     internal class BrokenExpression : IExpression {}
 
@@ -47,11 +56,24 @@ namespace Simple_Graphing_Calculator
     {
         public static List<IToken> Tokenise(string input)
         {
-            List<IToken> tokens = new List<IToken>(); 
+            List<IToken> tokens = new List<IToken>();
+            string correctedInput = input.ToLower();
 
-            for (int i = 0; i < input.Length; i++)
+            bool AddMulticharToken(MathFuncs mathFunc, ref int i, params char[] expectedChars)
             {
-                switch (input[i])
+                for (int j = 0; j < expectedChars.Length; j++)
+                {
+                    if (correctedInput.Length <= i + j + 1) return false;
+                    if (expectedChars[j] != correctedInput[i + j + 1]) return false;
+                }
+                i += expectedChars.Length;
+                tokens.Add(new MathFunc(mathFunc));
+                return true;
+            }
+
+            for (int i = 0; i < correctedInput.Length; i++)
+            {
+                switch (correctedInput[i])
                 {
                     case '\0': case ' ': case '\n': break;
 
@@ -62,11 +84,41 @@ namespace Simple_Graphing_Calculator
                     case '^': tokens.Add(new Operator(Operators.POWER)); break;
                     case '(': tokens.Add(new Operator(Operators.OPEN)); break;
                     case ')': tokens.Add(new Operator(Operators.CLOSE)); break;
+                    case '|': tokens.Add(new Operator(Operators.ABS)); break;
 
-                    case 'X': case 'x': tokens.Add(new MathFunc(MathFuncs.X)); break;
+                    case 'x': tokens.Add(new MathFunc(MathFuncs.X)); break;
+                    case 'e': tokens.Add(new MathFunc(MathFuncs.E)); break;
+                    case 'π': tokens.Add(new MathFunc(MathFuncs.PI)); break;
+                    // logs
+                    case 'l':
+                        if (!AddMulticharToken(MathFuncs.LN, ref i, 'n') && 
+                            !AddMulticharToken(MathFuncs.LOG, ref i, 'o', 'g'))
+                            tokens.Add(new Operator(Operators.ERR));
+                        break;
+                    // SIN
+                    case 's':
+                        if (!AddMulticharToken(MathFuncs.SIN, ref i, 'i', 'n'))
+                            tokens.Add(new Operator(Operators.ERR));
+                        break;
+                    // COS and Ceil
+                    case 'c':
+                        if (!AddMulticharToken(MathFuncs.COS, ref i, 'o', 's') &&
+                            !AddMulticharToken(MathFuncs.CEIL, ref i, 'e', 'i', 'l'))
+                            tokens.Add(new Operator(Operators.ERR));
+                        break;
+                    // TAN
+                    case 't':
+                        if (!AddMulticharToken(MathFuncs.TAN, ref i, 'a', 'n'))
+                            tokens.Add(new Operator(Operators.ERR));
+                        break;
+                    // Floor
+                    case 'f':
+                        if (!AddMulticharToken(MathFuncs.FLOOR, ref i, 'l', 'o', 'o', 'r'))
+                            tokens.Add(new Operator(Operators.ERR));
+                        break;
 
                     default:
-                        try { tokens.Add(new Number(Number(input, ref i))); }
+                        try { tokens.Add(new Number(Number(correctedInput, ref i))); }
                         catch { tokens.Add(new Operator(Operators.ERR)); }
                         break;
                 }
@@ -179,10 +231,14 @@ namespace Simple_Graphing_Calculator
                 i++;
                 return new Value(n.value);
             }
-            if (tokens[i] is MathFunc) 
+            if (tokens[i] is MathFunc func) 
             {
                 i++;
-                return new FuncExpression(MathFuncs.X);
+                return func.type switch
+                {
+                    MathFuncs.X or MathFuncs.E or MathFuncs.PI => new VarExpression(func.type),
+                    _ => new FuncExpression(func.type, parsePrimary()),
+                };
             }   
 
             if (match(Operators.OPEN))
@@ -194,6 +250,17 @@ namespace Simple_Graphing_Calculator
                     return new BrokenExpression();
                 }
                 if (tokens[i++] is Operator r) if (r.operatr == Operators.CLOSE) return expr;
+                isBroken = true;
+            }
+            if (match(Operators.ABS))
+            {
+                IExpression expr = parseArithmetic();
+                if (i >= tokens.Count)
+                {
+                    isBroken = true;
+                    return new BrokenExpression();
+                }
+                if (tokens[i++] is Operator r) if (r.operatr == Operators.ABS) return new AbsExpression(expr);
                 isBroken = true;
             }
             isBroken = true; return new BrokenExpression();
@@ -215,7 +282,29 @@ namespace Simple_Graphing_Calculator
             if (expr is Value val) return val.value;
             if (expr is BinaryExpression binary) return InterpretBinary(binary);
             if (expr is UnaryExpression unary) return InterpretUnary(unary);
-            if (expr is FuncExpression) return x;
+            if (expr is AbsExpression abs) return Math.Abs(Interpret(abs.expr));
+            if (expr is VarExpression var)
+            {
+                switch (var.type)
+                {
+                    case MathFuncs.X: return x;
+                    case MathFuncs.E: return Math.E;
+                    case MathFuncs.PI: return Math.PI;
+                }
+            }
+            if (expr is FuncExpression func)
+            {
+                switch (func.type)
+                {
+                    case MathFuncs.LN: return Math.Log(Interpret(func.func));
+                    case MathFuncs.LOG: return Math.Log10(Interpret(func.func));
+                    case MathFuncs.SIN: return Math.Sin(Interpret(func.func));
+                    case MathFuncs.COS: return Math.Cos(Interpret(func.func));
+                    case MathFuncs.TAN: return Math.Tan(Interpret(func.func));
+                    case MathFuncs.CEIL: return Math.Ceiling(Interpret(func.func));
+                    case MathFuncs.FLOOR: return Math.Floor(Interpret(func.func));
+                }
+            }
             error = true;
             return 0;
         }

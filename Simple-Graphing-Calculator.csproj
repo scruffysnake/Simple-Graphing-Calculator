@@ -14,4 +14,9 @@
     <PackageReference Include="rlImgui-cs" Version="3.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="SpaceMono-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
