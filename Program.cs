@@ -53,6 +53,8 @@ namespace Simple_Graphing_Calculator
         static Color AxesColour = Color.LightGray;
         static Color GridColour = Color.DarkGray;
 
+        static List<Function> functions = [];
+
         public static void Main()
         {
             // Init
@@ -80,10 +82,10 @@ namespace Simple_Graphing_Calculator
 
             // Functions
             Vector2 functionsDefaultPosition = new Vector2(60, 200);
-            var functions = new List<Function>();
 
             // Settings
             Vector2 UtilsDefaultPosition = new Vector2(1200, 800);
+            bool isMovingImGui = false;
 
             // Main Loop
             while (!Raylib.WindowShouldClose())
@@ -93,14 +95,14 @@ namespace Simple_Graphing_Calculator
                 view.Offset = new Vector2(ResolutionX / 2, ResolutionY / 2);
 
                 // Input
-                Input(ref view);
+                Input(ref view, ref isMovingImGui);
 
                 // Draw
                 Raylib.BeginDrawing();
                     Raylib.ClearBackground(BackgroundColour);
                     DrawAxes(ref view);
-                    EditFunctions(ref functions);
-                    DrawFunctions(ref view, functions);
+                    EditFunctions();
+                    DrawFunctions(ref view);
                     DrawMousePosition(ref view);
 
                     // ImGui
@@ -112,7 +114,7 @@ namespace Simple_Graphing_Calculator
 
                         // Functions
                         ImGui.SetNextWindowPos(functionsDefaultPosition, ImGuiCond.FirstUseEver);
-                        FunctionsWindow(ref functions);
+                        FunctionsWindow();
 
                         // Settings
                         ImGui.SetNextWindowPos(UtilsDefaultPosition, ImGuiCond.FirstUseEver);
@@ -124,7 +126,7 @@ namespace Simple_Graphing_Calculator
 
             Raylib.CloseWindow();
         }
-        static void Input(ref Camera2D view)
+        static void Input(ref Camera2D view, ref bool isMovingImGui)
         {
             // Zoom
             const float ZOOM_INCREMENT = 2.5f;
@@ -132,11 +134,17 @@ namespace Simple_Graphing_Calculator
             if (view.Zoom < 10) view.Zoom = 10;
 
             // Move
-            if (Raylib.IsMouseButtonDown(MouseButton.Right) || Raylib.IsMouseButtonDown(MouseButton.Middle))
+            if (Raylib.IsMouseButtonDown(MouseButton.Left) || Raylib.IsMouseButtonDown(MouseButton.Right) || Raylib.IsMouseButtonDown(MouseButton.Middle))
             {
-                Vector2 mouseDelta = Raylib.GetMouseDelta() * (-1 / view.Zoom);
-                view.Target += mouseDelta;
+                if (ImGui.IsWindowHovered(ImGuiHoveredFlags.AnyWindow)) isMovingImGui = true;
+                if (!isMovingImGui || Raylib.IsMouseButtonDown(MouseButton.Right) || Raylib.IsMouseButtonDown(MouseButton.Middle)) 
+                {
+                    Vector2 mouseDelta = Raylib.GetMouseDelta() * (-1 / view.Zoom);
+                    view.Target += mouseDelta;
+                }
             }
+            if (Raylib.IsMouseButtonUp(MouseButton.Left)) isMovingImGui = false;
+            if (Raylib.IsKeyPressed(KeyboardKey.Enter)) AddFunction();
         }
         static void DrawAxes(ref Camera2D view) 
         {
@@ -214,7 +222,7 @@ namespace Simple_Graphing_Calculator
                 if (ImGui.Button("Reset Location")) view.Target = new Vector2(0, 0);
             ImGui.End();
         }
-        static void FunctionsWindow(ref List<Function> functions)
+        static void FunctionsWindow()
         {
             ImGui.Begin("Functions", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
                 for (int i = 0; i < functions.Count; i++)
@@ -230,7 +238,7 @@ namespace Simple_Graphing_Calculator
                     ImGui.Text("=");
                     ImGui.SameLine();
                     ImGui.PushID(i);
-                    ImGui.InputText("##", ref currentFunc.func, 128);
+                    ImGui.InputText($"id: {currentFunc.ID}", ref currentFunc.func, 128);
                     ImGui.PopID();
                     functions[i] = currentFunc;
                     ImGui.SameLine();
@@ -242,10 +250,10 @@ namespace Simple_Graphing_Calculator
                     }
                     ImGui.PopID();
                 }
-                if (ImGui.Button("Add Function")) AddFunction(ref functions);
+                if (ImGui.Button("Add Function")) AddFunction();
             ImGui.End();
         }
-        static void DrawFunctions(ref Camera2D View, List<Function> functions)
+        static void DrawFunctions(ref Camera2D View)
         {
             foreach (var func in functions)
             {
@@ -290,7 +298,7 @@ namespace Simple_Graphing_Calculator
                 }
             }
         }
-        static void EditFunctions(ref List<Function> functions)
+        static void EditFunctions()
         {
             for (int i = 0; i < functions.Count; i++)
             {
@@ -335,7 +343,7 @@ namespace Simple_Graphing_Calculator
             ImGui.End();
             ImGui.GetIO().FontGlobalScale = fontScale / (CustomFont ? 6 : 1);
         }
-        static void AddFunction(ref List<Function> functions)
+        static void AddFunction()
         {
             var newFunc = new Function();
             newFunc.func = "";

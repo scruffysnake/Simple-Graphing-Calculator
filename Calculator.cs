@@ -6,7 +6,7 @@ namespace Simple_Graphing_Calculator
     }
     public enum MathFuncs
     {
-        VAR, PI, E, LN, LOG, SIN, COS, TAN, CEIL, FLOOR
+        VAR, PI, E, LN, LOG, SIN, COS, TAN, CEIL, FLOOR,
     }
     interface IToken {}
     struct MathFunc(MathFuncs type) : IToken
@@ -20,6 +20,10 @@ namespace Simple_Graphing_Calculator
     struct Operator(Operators operatr) : IToken
     {
         public Operators operatr = operatr;
+    }
+    struct FN(double id) : IToken
+    {
+        public int id = (int)id;
     }
 
     interface IExpression {}
@@ -118,8 +122,9 @@ namespace Simple_Graphing_Calculator
                         break;
                     // Floor
                     case 'f':
-                        if (!AddMulticharToken(MathFuncs.FLOOR, ref i, 'l', 'o', 'o', 'r'))
-                            tokens.Add(new Operator(Operators.ERR));
+                        if (AddMulticharToken(MathFuncs.FLOOR, ref i, 'l', 'o', 'o', 'r')) break;
+                        try { tokens.Add(new FN(Number(correctedInput, ref i))); }
+                        catch { tokens.Add(new Operator(Operators.ERR)); }
                         break;
 
                     default:
@@ -265,7 +270,8 @@ namespace Simple_Graphing_Calculator
                     MathFuncs.VAR or MathFuncs.E or MathFuncs.PI => new VarExpression(func.type),
                     _ => new FuncExpression(func.type, parsePrimary()),
                 };
-            }   
+            }
+
 
             if (match(Operators.OPEN))
             {
@@ -293,7 +299,7 @@ namespace Simple_Graphing_Calculator
         }
     }
 
-    static class Evaluator
+    class Evaluator
     {
         public static double coord;
         public static bool error;
