@@ -14,11 +14,11 @@ using System.Text.RegularExpressions;
 
 namespace Simple_Graphing_Calculator
 {
-    struct Function(int ID, string func, Vector3 colour, FunctionTypes funcType)
+    struct Function(int ID, string func, Vector4 colour, FunctionTypes funcType)
     {
         public int ID = ID;
         public string func = func;
-        public Vector3 colour = colour;
+        public Vector4 colour = colour;
         public FunctionTypes funcType = funcType;
     }
     enum FunctionTypes
@@ -233,7 +233,7 @@ namespace Simple_Graphing_Calculator
                 {
                     var currentFunc = functions[i];
                     ImGui.PushID(i);
-                    ImGui.ColorEdit3("", ref currentFunc.colour, ImGuiColorEditFlags.NoInputs);
+                    ImGui.ColorEdit4("", ref currentFunc.colour, ImGuiColorEditFlags.NoInputs);
                     ImGui.PopID();
                     ImGui.SameLine();
                     if (ImGui.Button(char.ToUpper((char)currentFunc.funcType) + currentFunc.ID.ToString()))
@@ -269,7 +269,8 @@ namespace Simple_Graphing_Calculator
                 Color color = new Color(
                     (int)(Math.Clamp(func.colour.X, 0, 1) * 255), 
                     (int)(Math.Clamp(func.colour.Y, 0, 1) * 255), 
-                    (int)(Math.Clamp(func.colour.Z, 0, 1) * 255));
+                    (int)(Math.Clamp(func.colour.Z, 0, 1) * 255),
+                    (int)(Math.Clamp(func.colour.W, 0, 1) * 255));
 
                 Evaluator calculator = new Evaluator();
                 calculator.id = func.ID;
@@ -353,7 +354,7 @@ namespace Simple_Graphing_Calculator
         {
             var newFunc = new Function();
             newFunc.func = "";
-            newFunc.colour = IsLightMode ? new Vector3(0, 0, 0) : new Vector3(1, 1, 1);
+            newFunc.colour = IsLightMode ? new Vector4(0, 0, 0, 1) : new Vector4(1, 1, 1, 1);
             for (int i = 0; i <= functions.Count; i++)
             {
                 if (!functions.Any(f => f.ID == i))
