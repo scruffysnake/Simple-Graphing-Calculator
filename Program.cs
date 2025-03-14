@@ -3,6 +3,7 @@ using ImGuiNET;
 using rlImGui_cs;
 using System.Numerics;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 
 /*
     Naming convensions:
@@ -102,7 +103,7 @@ namespace Simple_Graphing_Calculator
                     Raylib.ClearBackground(BackgroundColour);
                     DrawAxes(ref view);
                     EditFunctions();
-                    DrawFunctions(ref view);
+                    DrawFunctions(view);
                     DrawMousePosition(ref view);
 
                     // ImGui
@@ -257,12 +258,15 @@ namespace Simple_Graphing_Calculator
                 if (ImGui.Button("Add Function")) AddFunction();
             ImGui.End();
         }
-        static void DrawFunctions(ref Camera2D View)
+        static void DrawFunctions(Camera2D View)
         {
-            foreach (var func in functions)
+            // Raylib.DrawLine is not thread safe
+            var lines = new ConcurrentBag<(Vector2 Start, Vector2 End, Color Color)>();
+
+            Parallel.ForEach(functions, func =>
             {
                 List<IToken> tokens = Calculator.Tokenise(func.func);
-                if (tokens.Contains(new Operator(Operators.ERR))) continue;
+                if (tokens.Contains(new Operator(Operators.ERR))) return;
                 Parser parser = new Parser(tokens);
                 IExpression parsedFunction = parser.parse();
 
@@ -299,11 +303,13 @@ namespace Simple_Graphing_Calculator
 
                     if (firstPoint) previousPosition = finalScreenPos;
 
-                    Raylib.DrawLine((int)previousPosition.X, (int)previousPosition.Y, (int)finalScreenPos.X, (int)finalScreenPos.Y, color);
+                    lines.Add((previousPosition, finalScreenPos, color));
                     previousPosition = finalScreenPos;
                     firstPoint = false;
                 }
-            }
+            });
+
+            foreach (var line in lines) Raylib.DrawLineV(line.Start, line.End, line.Color);
         }
         static void EditFunctions()
         {
