@@ -26,7 +26,7 @@ namespace Simple_Graphing_Calculator
         Y = 'y',
         X = 'x',
     }
-    class Program
+    static class Program
     {
         const string FONT_PATH = "SpaceMono-Regular.ttf";
         const int FONT_SIZE = 117;
@@ -53,7 +53,7 @@ namespace Simple_Graphing_Calculator
         static Color AxesColour = Color.LightGray;
         static Color GridColour = Color.DarkGray;
 
-        static List<Function> functions = [];
+        public static List<Function> functions = [];
 
         public static void Main()
         {
@@ -134,10 +134,14 @@ namespace Simple_Graphing_Calculator
             if (view.Zoom < 10) view.Zoom = 10;
 
             // Move
-            if (Raylib.IsMouseButtonDown(MouseButton.Left) || Raylib.IsMouseButtonDown(MouseButton.Right) || Raylib.IsMouseButtonDown(MouseButton.Middle))
+            if (Raylib.IsMouseButtonDown(MouseButton.Left) 
+             || Raylib.IsMouseButtonDown(MouseButton.Right) 
+             || Raylib.IsMouseButtonDown(MouseButton.Middle))
             {
                 if (ImGui.IsWindowHovered(ImGuiHoveredFlags.AnyWindow)) isMovingImGui = true;
-                if (!isMovingImGui || Raylib.IsMouseButtonDown(MouseButton.Right) || Raylib.IsMouseButtonDown(MouseButton.Middle)) 
+                if (!isMovingImGui 
+                 || Raylib.IsMouseButtonDown(MouseButton.Right) 
+                 || Raylib.IsMouseButtonDown(MouseButton.Middle)) 
                 {
                     Vector2 mouseDelta = Raylib.GetMouseDelta() * (-1 / view.Zoom);
                     view.Target += mouseDelta;
@@ -267,6 +271,8 @@ namespace Simple_Graphing_Calculator
                     (int)(Math.Clamp(func.colour.Y, 0, 1) * 255), 
                     (int)(Math.Clamp(func.colour.Z, 0, 1) * 255));
 
+                Evaluator calculator = new Evaluator();
+                calculator.id = func.ID;
                 Vector2 previousPosition = new Vector2();
                 bool firstPoint = true;
                 bool isYFunc = func.funcType == FunctionTypes.Y;
@@ -277,11 +283,11 @@ namespace Simple_Graphing_Calculator
                     if (isYFunc) coord = Raylib.GetScreenToWorld2D(new Vector2(i / SamplesPerPixel, 0), View).X;
                     else coord = - Raylib.GetScreenToWorld2D(new Vector2(0, i / SamplesPerPixel), View).Y;
 
-                    Evaluator.Reset();
-                    Evaluator.coord = coord;
-                    double realFunc = Evaluator.Interpret(parsedFunction);
+                    calculator.Reset();
+                    calculator.coord = coord;
+                    double realFunc = calculator.Interpret(parsedFunction);
 
-                    if (Evaluator.error || double.IsInfinity(realFunc)) 
+                    if (calculator.error || double.IsInfinity(realFunc)) 
                     {
                         firstPoint = true;
                         continue;

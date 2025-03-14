@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+
 namespace Simple_Graphing_Calculator
 {
     public enum Operators
@@ -52,6 +54,11 @@ namespace Simple_Graphing_Calculator
     }
     internal class AbsExpression(IExpression expr) : IExpression
     {
+        public IExpression expr = expr;
+    }
+    internal class FNExpression(int id, IExpression expr) : IExpression
+    {
+        public int id = id;
         public IExpression expr = expr;
     }
     internal class BrokenExpression : IExpression {}
@@ -123,7 +130,11 @@ namespace Simple_Graphing_Calculator
                     // Floor
                     case 'f':
                         if (AddMulticharToken(MathFuncs.FLOOR, ref i, 'l', 'o', 'o', 'r')) break;
-                        try { tokens.Add(new FN(Number(correctedInput, ref i))); }
+                        try 
+                        { 
+                            i++;
+                            tokens.Add(new FN(Number(correctedInput, ref i))); 
+                        }
                         catch { tokens.Add(new Operator(Operators.ERR)); }
                         break;
 
@@ -271,6 +282,11 @@ namespace Simple_Graphing_Calculator
                     _ => new FuncExpression(func.type, parsePrimary()),
                 };
             }
+            if (tokens[i] is FN fn)
+            {
+                i++;
+                return new FNExpression(fn.id, parsePrimary());
+            }
 
 
             if (match(Operators.OPEN))
@@ -301,17 +317,19 @@ namespace Simple_Graphing_Calculator
 
     class Evaluator
     {
-        public static double coord;
-        public static bool error;
-        public static bool floorOrCeil;
+        public double coord;
+        public bool error;
+        public bool floorOrCeil;
+        public List<(int id, IExpression expr)> functionCalls = [];
+        public int id;
 
-        public static void Reset()
+        public void Reset()
         {
             error = false;
             floorOrCeil = false;
         }
 
-        public static double Interpret(IExpression expr)
+        public double Interpret(IExpression expr)
         {
             if (expr is Value val) return val.value;
             if (expr is BinaryExpression binary) return InterpretBinary(binary);
@@ -347,10 +365,31 @@ namespace Simple_Graphing_Calculator
                     }
                 }
             }
-            error = true;
-            return 0;
+            if (expr is FNExpression fn)
+            {
+                if (fn.id == id) return Error();
+                if (!Program.functions.Any(f => f.ID == fn.id)) return Error();
+                
+                IExpression internalExpression;
+                if (!functionCalls.Any(f => f.id == fn.id))
+                {
+                    List<IToken> tokens = Calculator.Tokenise(Program.functions.Find(f => f.ID == fn.id).func);
+                    if (tokens.Contains(new Operator(Operators.ERR))) return Error();
+                    Parser parser = new(tokens);
+                    functionCalls.Add((fn.id, expr: parser.parse()));
+                }
+                internalExpression = functionCalls.Find(f => f.id == fn.id).expr;
+                double Var = Interpret(fn.expr);
+                Evaluator calculator = new();
+                calculator.Reset();
+                calculator.coord = Var;
+                double output = calculator.Interpret(internalExpression);
+                if (double.IsFinite(output)) return output;
+                return Error();
+            }
+            return Error();
         }
-        static double InterpretBinary(BinaryExpression binary)
+        double InterpretBinary(BinaryExpression binary)
         {
             double left = Interpret(binary.left);
             double right = Interpret(binary.right);
@@ -361,18 +400,13 @@ namespace Simple_Graphing_Calculator
                 case Operators.MINUS: return left - right;
                 case Operators.MULTIPLY: return left * right;
                 case Operators.DIVIDE: 
-                    if (right == 0) 
-                    {
-                        error = true;
-                        return 0;
-                    }
+                    if (right == 0) return Error();
                     return left / right;
                 case Operators.POWER: return Math.Pow(left, right);
             }
-            error = true;
-            return 0;
+            return Error();
         }
-        static double InterpretUnary(UnaryExpression unary)
+        double InterpretUnary(UnaryExpression unary)
         {
             double val = Interpret(unary.expr);
             switch (unary.operatr)
@@ -380,8 +414,12 @@ namespace Simple_Graphing_Calculator
                 case Operators.PLUS: return val;
                 case Operators.MINUS: return -val;
             }
+            return Error();
+        }
+        double Error()
+        {
             error = true;
-            return 0;
+            return double.NaN;
         }
     }
 }
