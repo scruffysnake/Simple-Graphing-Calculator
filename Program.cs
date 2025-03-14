@@ -14,6 +14,18 @@ using System.Text.RegularExpressions;
 
 namespace Simple_Graphing_Calculator
 {
+    struct Function(int ID, string func, Vector3 colour, FunctionTypes funcType)
+    {
+        public int ID = ID;
+        public string func = func;
+        public Vector3 colour = colour;
+        public FunctionTypes funcType = funcType;
+    }
+    enum FunctionTypes
+    {
+        Y = 'y',
+        X = 'x',
+    }
     class Program
     {
         const string FONT_PATH = "SpaceMono-Regular.ttf";
@@ -68,7 +80,7 @@ namespace Simple_Graphing_Calculator
 
             // Functions
             Vector2 functionsDefaultPosition = new Vector2(60, 200);
-            var functions = new List<(string, Vector3)>();
+            var functions = new List<Function>();
 
             // Settings
             Vector2 UtilsDefaultPosition = new Vector2(1200, 800);
@@ -202,7 +214,7 @@ namespace Simple_Graphing_Calculator
                 if (ImGui.Button("Reset Location")) view.Target = new Vector2(0, 0);
             ImGui.End();
         }
-        static void FunctionsWindow(ref List<(string func, Vector3 colour)> functions)
+        static void FunctionsWindow(ref List<Function> functions)
         {
             ImGui.Begin("Functions", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
                 for (int i = 0; i < functions.Count; i++)
@@ -212,10 +224,13 @@ namespace Simple_Graphing_Calculator
                     ImGui.ColorEdit3("", ref currentFunc.colour, ImGuiColorEditFlags.NoInputs);
                     ImGui.PopID();
                     ImGui.SameLine();
-                    ImGui.Text("Y =");
+                    if (ImGui.Button(char.ToUpper((char)currentFunc.funcType) + currentFunc.ID.ToString()))
+                        currentFunc.funcType = currentFunc.funcType == FunctionTypes.X ? FunctionTypes.Y : FunctionTypes.X;
+                    ImGui.SameLine();
+                    ImGui.Text("=");
                     ImGui.SameLine();
                     ImGui.PushID(i);
-                    ImGui.InputText("##= Y", ref currentFunc.func, 128);
+                    ImGui.InputText("##", ref currentFunc.func, 128);
                     ImGui.PopID();
                     functions[i] = currentFunc;
                     ImGui.SameLine();
@@ -227,10 +242,10 @@ namespace Simple_Graphing_Calculator
                     }
                     ImGui.PopID();
                 }
-                if (ImGui.Button("Add Function")) functions.Add(("", new Vector3(1, 1, 1)));
+                if (ImGui.Button("Add Function")) AddFunction(ref functions);
             ImGui.End();
         }
-        static void DrawFunctions(ref Camera2D View, List<(string func, Vector3 colour)> functions)
+        static void DrawFunctions(ref Camera2D View, List<Function> functions)
         {
             foreach (var func in functions)
             {
@@ -244,48 +259,50 @@ namespace Simple_Graphing_Calculator
                     (int)(Math.Clamp(func.colour.Y, 0, 1) * 255), 
                     (int)(Math.Clamp(func.colour.Z, 0, 1) * 255));
 
-                double previousPositionY = 0;
+                Vector2 previousPosition = new Vector2();
                 bool firstPoint = true;
-                for (int i = 0; i < ResolutionX * SamplesPerPixel; i++)
+                bool isYFunc = func.funcType == FunctionTypes.Y;
+                int resolution = isYFunc ? ResolutionX : ResolutionY;
+                for (int i = 0; i < resolution * SamplesPerPixel; i++)
                 {
-                    double x = Raylib.GetScreenToWorld2D(new Vector2(i / SamplesPerPixel, 0), View).X;
+                    double coord;
+                    if (isYFunc) coord = Raylib.GetScreenToWorld2D(new Vector2(i / SamplesPerPixel, 0), View).X;
+                    else coord = - Raylib.GetScreenToWorld2D(new Vector2(0, i / SamplesPerPixel), View).Y;
 
                     Evaluator.Reset();
-                    Evaluator.x = x;
-                    double realY = - Evaluator.Interpret(parsedFunction);
+                    Evaluator.coord = coord;
+                    double realFunc = Evaluator.Interpret(parsedFunction);
 
-                    if (Evaluator.error) 
+                    if (Evaluator.error || double.IsInfinity(realFunc)) 
                     {
                         firstPoint = true;
                         continue;
                     }
-                    double y = Raylib.GetWorldToScreen2D(new Vector2(0, (float)realY), View).Y;
+                    Vector2 finalScreenPos = new(i / SamplesPerPixel, i / SamplesPerPixel);
+                    if (isYFunc) finalScreenPos.Y = Raylib.GetWorldToScreen2D(new Vector2(0, -(float)realFunc), View).Y;
+                    else finalScreenPos.X = Raylib.GetWorldToScreen2D(new Vector2((float)realFunc), View).X;
 
-                    if (firstPoint) previousPositionY = (int)y;
-                    if (!firstPoint)
-                    {
-                        if (Math.Abs(previousPositionY - y) > 
-                            (Evaluator.floorOrCeil ? MaxVerticalJumpThreshold : MaxVerticalJumpThresholdNoFloorOrCeil))
-                        {
-                            Evaluator.x = Raylib.GetScreenToWorld2D(new Vector2((i + .5f) / SamplesPerPixel, 0), View).X;
-                            double realY2 = - Evaluator.Interpret(parsedFunction);
-                            double y2 = Raylib.GetWorldToScreen2D(new Vector2(0, (float)realY2), View).Y;
-                            if (Math.Abs(y - previousPositionY) >= Math.Abs(y - y2)) previousPositionY = (int)y;
-                            Evaluator.x = x;
-                        }
-                    }
-                    Raylib.DrawLine((i - 1) / SamplesPerPixel, (int)previousPositionY, i / SamplesPerPixel, (int)y, color);
-                    previousPositionY = y;
+                    if (firstPoint) previousPosition = finalScreenPos;
+
+                    Raylib.DrawLine((int)previousPosition.X, (int)previousPosition.Y, (int)finalScreenPos.X, (int)finalScreenPos.Y, color);
+                    previousPosition = finalScreenPos;
                     firstPoint = false;
                 }
             }
         }
-        static void EditFunctions(ref List<(string func, Vector3 colour)> functions)
+        static void EditFunctions(ref List<Function> functions)
         {
             for (int i = 0; i < functions.Count; i++)
             {
-                string func = Regex.Replace(functions[i].func, @"pi", "π", RegexOptions.IgnoreCase);
-                functions[i] = (func , functions[i].colour);
+                Function currentFunction = functions[i]; 
+                // PI
+                currentFunction.func = Regex.Replace(functions[i].func, @"pi", "π", RegexOptions.IgnoreCase);
+                // Replace x<->y
+                string correctInput = currentFunction.funcType == FunctionTypes.X ? "y" : "x";
+                currentFunction.func = Regex.Replace(functions[i].func, ((char)currentFunction.funcType).ToString(), correctInput, RegexOptions.IgnoreCase);
+
+                if (functions[i].func == currentFunction.func) continue;
+                functions[i] = currentFunction;
             }
         }
         static void UtilsWindow()
@@ -317,6 +334,22 @@ namespace Simple_Graphing_Calculator
                 ImGui.InputInt("Max Vertical Jump Threshold", ref MaxVerticalJumpThresholdNoFloorOrCeil);
             ImGui.End();
             ImGui.GetIO().FontGlobalScale = fontScale / (CustomFont ? 6 : 1);
+        }
+        static void AddFunction(ref List<Function> functions)
+        {
+            var newFunc = new Function();
+            newFunc.func = "";
+            newFunc.colour = IsLightMode ? new Vector3(0, 0, 0) : new Vector3(1, 1, 1);
+            for (int i = 0; i <= functions.Count; i++)
+            {
+                if (!functions.Any(f => f.ID == i))
+                {
+                    newFunc.ID = i;
+                    break;
+                }
+            }
+            newFunc.funcType = FunctionTypes.Y;
+            functions.Add(newFunc);
         }
     }
 }

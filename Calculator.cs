@@ -70,9 +70,15 @@ namespace Simple_Graphing_Calculator
                 tokens.Add(new MathFunc(mathFunc));
                 return true;
             }
+            bool IsValidFunctionType(char c) => Enum.IsDefined(typeof(FunctionTypes), (int)c);
 
             for (int i = 0; i < correctedInput.Length; i++)
             {
+                if (IsValidFunctionType(correctedInput[i]))
+                {
+                    tokens.Add(new MathFunc(MathFuncs.VAR));
+                    continue;
+                }
                 switch (correctedInput[i])
                 {
                     case '\0': case ' ': case '\n': break;
@@ -86,7 +92,6 @@ namespace Simple_Graphing_Calculator
                     case ')': tokens.Add(new Operator(Operators.CLOSE)); break;
                     case '|': tokens.Add(new Operator(Operators.ABS)); break;
 
-                    case 'x': tokens.Add(new MathFunc(MathFuncs.VAR)); break;
                     case 'e': tokens.Add(new MathFunc(MathFuncs.E)); break;
                     case 'π': tokens.Add(new MathFunc(MathFuncs.PI)); break;
                     // logs
@@ -290,7 +295,7 @@ namespace Simple_Graphing_Calculator
 
     static class Evaluator
     {
-        public static double x;
+        public static double coord;
         public static bool error;
         public static bool floorOrCeil;
 
@@ -310,7 +315,7 @@ namespace Simple_Graphing_Calculator
             {
                 switch (var.type)
                 {
-                    case MathFuncs.VAR: return x;
+                    case MathFuncs.VAR: return coord;
                     case MathFuncs.E: return Math.E;
                     case MathFuncs.PI: return Math.PI;
                 }
