@@ -6,7 +6,7 @@ namespace Simple_Graphing_Calculator
     }
     public enum MathFuncs
     {
-        X, PI, E, LN, LOG, SIN, COS, TAN, CEIL, FLOOR
+        VAR, PI, E, LN, LOG, SIN, COS, TAN, CEIL, FLOOR
     }
     interface IToken {}
     struct MathFunc(MathFuncs type) : IToken
@@ -86,7 +86,7 @@ namespace Simple_Graphing_Calculator
                     case ')': tokens.Add(new Operator(Operators.CLOSE)); break;
                     case '|': tokens.Add(new Operator(Operators.ABS)); break;
 
-                    case 'x': tokens.Add(new MathFunc(MathFuncs.X)); break;
+                    case 'x': tokens.Add(new MathFunc(MathFuncs.VAR)); break;
                     case 'e': tokens.Add(new MathFunc(MathFuncs.E)); break;
                     case 'π': tokens.Add(new MathFunc(MathFuncs.PI)); break;
                     // logs
@@ -205,7 +205,7 @@ namespace Simple_Graphing_Calculator
             static bool RequiresImplicitMultiply(IToken a, IToken b)
             {
                 bool aIsPrimary = a is Number ||
-                                (a is MathFunc mfA && (mfA.type == MathFuncs.X || mfA.type == MathFuncs.PI || mfA.type == MathFuncs.E)) ||
+                                (a is MathFunc mfA && (mfA.type == MathFuncs.VAR || mfA.type == MathFuncs.PI || mfA.type == MathFuncs.E)) ||
                                 (a is Operator opA && (opA.operatr == Operators.CLOSE || opA.operatr == Operators.ABS));
 
                 bool bIsPrimary = b is Number ||
@@ -257,7 +257,7 @@ namespace Simple_Graphing_Calculator
                 i++;
                 return func.type switch
                 {
-                    MathFuncs.X or MathFuncs.E or MathFuncs.PI => new VarExpression(func.type),
+                    MathFuncs.VAR or MathFuncs.E or MathFuncs.PI => new VarExpression(func.type),
                     _ => new FuncExpression(func.type, parsePrimary()),
                 };
             }   
@@ -310,7 +310,7 @@ namespace Simple_Graphing_Calculator
             {
                 switch (var.type)
                 {
-                    case MathFuncs.X: return x;
+                    case MathFuncs.VAR: return x;
                     case MathFuncs.E: return Math.E;
                     case MathFuncs.PI: return Math.PI;
                 }

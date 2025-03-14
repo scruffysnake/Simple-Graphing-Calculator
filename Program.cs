@@ -36,6 +36,11 @@ namespace Simple_Graphing_Calculator
         static int MaxVerticalJumpThreshold = 5;
         static int MaxVerticalJumpThresholdNoFloorOrCeil = 400;
 
+        static bool IsLightMode = false;
+        static Color BackgroundColour = Color.Black;
+        static Color AxesColour = Color.LightGray;
+        static Color GridColour = Color.DarkGray;
+
         public static void Main()
         {
             // Init
@@ -80,7 +85,7 @@ namespace Simple_Graphing_Calculator
 
                 // Draw
                 Raylib.BeginDrawing();
-                    Raylib.ClearBackground(Color.Black);
+                    Raylib.ClearBackground(BackgroundColour);
                     DrawAxes(ref view);
                     EditFunctions(ref functions);
                     DrawFunctions(ref view, functions);
@@ -137,7 +142,7 @@ namespace Simple_Graphing_Calculator
             for (int i = 0; i < nOfLines.X + 1; i++)
             {
                 int x = i * spacingX + gridOffsetX;
-                if (ShowGrid) Raylib.DrawLine(x, 0, x, ResolutionX, Color.DarkGray);
+                if (ShowGrid) Raylib.DrawLine(x, 0, x, ResolutionX, GridColour);
 
                 // Numbers
                 if (view.Zoom < 75) continue;
@@ -146,7 +151,7 @@ namespace Simple_Graphing_Calculator
                 {
                     if (positionMarker == "0") continue;
                     int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).X;
-                    Raylib.DrawText(positionMarker, x - markerOffset / 2 - 1, (int)(axes.Y + 5), 20, Color.LightGray);
+                    Raylib.DrawText(positionMarker, x - markerOffset / 2 - 1, (int)(axes.Y + 5), 20, AxesColour);
                 }
             }
 
@@ -156,7 +161,7 @@ namespace Simple_Graphing_Calculator
             for (int i = 0; i < nOfLines.Y + 1; i++)
             {
                 int y = i * spacingY + gridOffsetY;
-                if(ShowGrid) Raylib.DrawLine(0, y, ResolutionX, y, Color.DarkGray);
+                if(ShowGrid) Raylib.DrawLine(0, y, ResolutionX, y, GridColour);
 
                 // Numbers
                 if (view.Zoom < 75) continue;
@@ -165,14 +170,14 @@ namespace Simple_Graphing_Calculator
                 {
                     if (positionMarker == "-0") continue;
                     int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).Y;
-                    Raylib.DrawText(positionMarker, (int)(axes.X + 5), y - markerOffset / 2 + 1, 20, Color.LightGray);
+                    Raylib.DrawText(positionMarker, (int)(axes.X + 5), y - markerOffset / 2 + 1, 20, AxesColour);
                 }
             }
 
             // Axes
             if (!ShowAxes) return;
-            Raylib.DrawLine((int)axes.X, 0, (int)axes.X, ResolutionY, Color.LightGray);
-            Raylib.DrawLine(0, (int)axes.Y, ResolutionX, (int)axes.Y, Color.LightGray);
+            Raylib.DrawLine((int)axes.X, 0, (int)axes.X, ResolutionY, AxesColour);
+            Raylib.DrawLine(0, (int)axes.Y, ResolutionX, (int)axes.Y, AxesColour);
         }
         static void DrawMousePosition(ref Camera2D view)
         {
@@ -183,7 +188,7 @@ namespace Simple_Graphing_Calculator
             int textWidth = Raylib.MeasureText(coords, 30);
             int x = ResolutionX - 5 - textWidth;
 
-            Raylib.DrawText(coords, x, ResolutionY - 30, 30, Color.LightGray);
+            Raylib.DrawText(coords, x, ResolutionY - 30, 30, AxesColour);
         }
         static void CameraWindow(ref Camera2D view)
         {
@@ -289,6 +294,14 @@ namespace Simple_Graphing_Calculator
             float fontScale = ImGui.GetIO().FontGlobalScale * (CustomFont ? 6 : 1);
             if (fontScale == 0) fontScale = 1;
             ImGui.Begin("Settings", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
+            // Colour
+                if (ImGui.Button(IsLightMode ? "Dark Mode" : "Light Mode")) 
+                {
+                    IsLightMode = !IsLightMode;
+                    BackgroundColour = IsLightMode ? Color.White : Color.Black;
+                    AxesColour = IsLightMode ? Color.DarkGray : Color.LightGray;
+                    GridColour = IsLightMode ? Color.LightGray : Color.DarkGray;
+                }
             // Scale
                 ImGui.InputFloat("Ui scale", ref fontScale, SNAP_INTERVAL);
                 fontScale = fontScale < .5 ? .5f : fontScale;
@@ -298,6 +311,7 @@ namespace Simple_Graphing_Calculator
                 if (ImGui.Button("Toogle Axes")) ShowAxes ^= true;
                 ImGui.SameLine();
                 if (ImGui.Button("Toogle Axes Markers")) ShowAxesMarkers ^= true;
+            // Misc settings
                 ImGui.InputInt("Samples Per Pixel", ref SamplesPerPixel);
                 ImGui.InputInt("Max Vertical Jump Threshold Floor and Ceil", ref MaxVerticalJumpThreshold);
                 ImGui.InputInt("Max Vertical Jump Threshold", ref MaxVerticalJumpThresholdNoFloorOrCeil);
