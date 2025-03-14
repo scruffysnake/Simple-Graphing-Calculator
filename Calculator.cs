@@ -315,13 +315,15 @@ namespace Simple_Graphing_Calculator
         }
     }
 
-    class Evaluator
+    class Evaluator(int recursionDepth = 0)
     {
         public double coord;
         public bool error;
         public bool floorOrCeil;
         public List<(int id, IExpression expr)> functionCalls = [];
         public int id;
+        public int recursionDepth = recursionDepth;
+        const int MAX_RECURSION_DEPTH = 2;
 
         public void Reset()
         {
@@ -367,6 +369,8 @@ namespace Simple_Graphing_Calculator
             }
             if (expr is FNExpression fn)
             {
+                if (recursionDepth > MAX_RECURSION_DEPTH) return Error();
+
                 if (fn.id == id) return Error();
                 if (!Program.functions.Any(f => f.ID == fn.id)) return Error();
                 

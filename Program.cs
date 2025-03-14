@@ -49,10 +49,15 @@ namespace Simple_Graphing_Calculator
         static int MaxVerticalJumpThreshold = 5;
         static int MaxVerticalJumpThresholdNoFloorOrCeil = 400;
 
+        static Vector3 BLACK_COLOUR = new(0, 0, 0);
+        static Vector3 WHITE_COLOUR = new(1, 1, 1);
+        static Vector3 DARK_GRAY_COLOUR = new(80 / 255f, 80 / 255f, 80 / 255f);
+        static Vector3 LIGHT_GRAY_COLOUR = new(200 / 255f, 200 / 255f, 200 / 255f);
+
         static bool IsLightMode = false;
-        static Color BackgroundColour = Color.Black;
-        static Color AxesColour = Color.LightGray;
-        static Color GridColour = Color.DarkGray;
+        static Vector3 BackgroundColour = BLACK_COLOUR;
+        static Vector3 AxesColour = LIGHT_GRAY_COLOUR;
+        static Vector3 GridColour = DARK_GRAY_COLOUR ;
 
         public static List<Function> functions = [];
 
@@ -100,7 +105,7 @@ namespace Simple_Graphing_Calculator
 
                 // Draw
                 Raylib.BeginDrawing();
-                    Raylib.ClearBackground(BackgroundColour);
+                    Raylib.ClearBackground(ConvertColour(BackgroundColour));
                     DrawAxes(ref view);
                     EditFunctions();
                     DrawFunctions(view);
@@ -161,13 +166,17 @@ namespace Simple_Graphing_Calculator
             Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), view);
             Vector2 nOfLines = bottomRight - topLeft;
 
+            // Colours
+            Color gridColour = ConvertColour(GridColour);
+            Color axesColour = ConvertColour(AxesColour);
+
             // Vertical
             int spacingX = (int)(ResolutionX / nOfLines.X);
             int gridOffsetX = (int)axes.X % spacingX;
             for (int i = 0; i < nOfLines.X + 1; i++)
             {
                 int x = i * spacingX + gridOffsetX;
-                if (ShowGrid) Raylib.DrawLine(x, 0, x, ResolutionX, GridColour);
+                if (ShowGrid) Raylib.DrawLine(x, 0, x, ResolutionX, gridColour);
 
                 // Numbers
                 if (view.Zoom < 75) continue;
@@ -176,7 +185,7 @@ namespace Simple_Graphing_Calculator
                 {
                     if (positionMarker == "0") continue;
                     int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).X;
-                    Raylib.DrawText(positionMarker, x - markerOffset / 2 - 1, (int)(axes.Y + 5), 20, AxesColour);
+                    Raylib.DrawText(positionMarker, x - markerOffset / 2 - 1, (int)(axes.Y + 5), 20, axesColour);
                 }
             }
 
@@ -186,7 +195,7 @@ namespace Simple_Graphing_Calculator
             for (int i = 0; i < nOfLines.Y + 1; i++)
             {
                 int y = i * spacingY + gridOffsetY;
-                if(ShowGrid) Raylib.DrawLine(0, y, ResolutionX, y, GridColour);
+                if(ShowGrid) Raylib.DrawLine(0, y, ResolutionX, y, gridColour);
 
                 // Numbers
                 if (view.Zoom < 75) continue;
@@ -195,14 +204,14 @@ namespace Simple_Graphing_Calculator
                 {
                     if (positionMarker == "-0") continue;
                     int markerOffset = (int)Raylib.MeasureTextEx(Raylib.GetFontDefault(), positionMarker, 20, 5).Y;
-                    Raylib.DrawText(positionMarker, (int)(axes.X + 5), y - markerOffset / 2 + 1, 20, AxesColour);
+                    Raylib.DrawText(positionMarker, (int)(axes.X + 5), y - markerOffset / 2 + 1, 20, axesColour);
                 }
             }
 
             // Axes
             if (!ShowAxes) return;
-            Raylib.DrawLine((int)axes.X, 0, (int)axes.X, ResolutionY, AxesColour);
-            Raylib.DrawLine(0, (int)axes.Y, ResolutionX, (int)axes.Y, AxesColour);
+            Raylib.DrawLine((int)axes.X, 0, (int)axes.X, ResolutionY, axesColour);
+            Raylib.DrawLine(0, (int)axes.Y, ResolutionX, (int)axes.Y, axesColour);
         }
         static void DrawMousePosition(ref Camera2D view)
         {
@@ -213,7 +222,7 @@ namespace Simple_Graphing_Calculator
             int textWidth = Raylib.MeasureText(coords, 30);
             int x = ResolutionX - 5 - textWidth;
 
-            Raylib.DrawText(coords, x, ResolutionY - 30, 30, AxesColour);
+            Raylib.DrawText(coords, x, ResolutionY - 30, 30, ConvertColour(AxesColour));
         }
         static void CameraWindow(ref Camera2D view)
         {
@@ -336,10 +345,16 @@ namespace Simple_Graphing_Calculator
                 if (ImGui.Button(IsLightMode ? "Dark Mode" : "Light Mode")) 
                 {
                     IsLightMode = !IsLightMode;
-                    BackgroundColour = IsLightMode ? Color.White : Color.Black;
-                    AxesColour = IsLightMode ? Color.DarkGray : Color.LightGray;
-                    GridColour = IsLightMode ? Color.LightGray : Color.DarkGray;
+                    BackgroundColour = IsLightMode ? WHITE_COLOUR : BLACK_COLOUR;
+                    AxesColour = IsLightMode ? DARK_GRAY_COLOUR : LIGHT_GRAY_COLOUR;
+                    GridColour = IsLightMode ? LIGHT_GRAY_COLOUR : DARK_GRAY_COLOUR;
                 }
+                ImGui.SameLine();
+                ImGui.ColorEdit3("Background Colour", ref BackgroundColour, ImGuiColorEditFlags.NoInputs);
+                ImGui.SameLine();
+                ImGui.ColorEdit3("Axes Colour", ref AxesColour, ImGuiColorEditFlags.NoInputs);
+                ImGui.SameLine();
+                ImGui.ColorEdit3("Grid Colour", ref GridColour, ImGuiColorEditFlags.NoInputs);
             // Scale
                 ImGui.InputFloat("Ui scale", ref fontScale, SNAP_INTERVAL);
                 fontScale = fontScale < .5 ? .5f : fontScale;
@@ -372,5 +387,16 @@ namespace Simple_Graphing_Calculator
             newFunc.funcType = FunctionTypes.Y;
             functions.Add(newFunc);
         }
+        // Colour Conversion (vec4)
+        static Color ConvertColour(Vector4 colour) => new(
+            (int)(Math.Clamp(colour.X, 0, 1) * 255), 
+            (int)(Math.Clamp(colour.Y, 0, 1) * 255), 
+            (int)(Math.Clamp(colour.Z, 0, 1) * 255),
+            (int)(Math.Clamp(colour.W, 0, 1) * 255));
+        // Colour Conversion (vec3)
+        static Color ConvertColour(Vector3 colour) => new(
+            (int)(Math.Clamp(colour.X, 0, 1) * 255), 
+            (int)(Math.Clamp(colour.Y, 0, 1) * 255), 
+            (int)(Math.Clamp(colour.Z, 0, 1) * 255), 255);
     }
 }
