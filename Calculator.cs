@@ -227,11 +227,11 @@ namespace Simple_Graphing_Calculator
             {
                 bool aIsPrimary = a is Number ||
                                 (a is MathFunc mfA && (mfA.type == MathFuncs.VAR || mfA.type == MathFuncs.PI || mfA.type == MathFuncs.E)) ||
-                                (a is Operator opA && (opA.operatr == Operators.CLOSE || opA.operatr == Operators.ABS));
+                                (a is Operator opA && (opA.operatr == Operators.CLOSE));
 
                 bool bIsPrimary = b is Number ||
                                 (b is MathFunc) ||
-                                (b is Operator opB && (opB.operatr == Operators.OPEN || opB.operatr == Operators.ABS));
+                                (b is Operator opB && (opB.operatr == Operators.OPEN));
 
                 return aIsPrimary && bIsPrimary;
             }
@@ -308,7 +308,9 @@ namespace Simple_Graphing_Calculator
                     isBroken = true;
                     return new BrokenExpression();
                 }
-                if (tokens[i++] is Operator r) if (r.operatr == Operators.ABS) return new AbsExpression(expr);
+                if (tokens[i++] is Operator r) {
+                    if (r.operatr == Operators.ABS) return new AbsExpression(expr);
+                }
                 isBroken = true;
             }
             isBroken = true; return new BrokenExpression();

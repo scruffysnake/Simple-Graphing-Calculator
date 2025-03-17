@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 # imgui
 imgui.ini
+
+# vs code
+.vscode
