@@ -84,14 +84,17 @@ namespace Simple_Graphing_Calculator
             // Camera
             var targetDefault = new Vector2(0, 0);
             var view = new Camera2D(Offset, targetDefault, 0, DEFAULT_ZOOM);
-            var cameraDefaultPosition = new Vector2(60, 60);
+            var CAMERA_DEFAULT_POSITION = new Vector2(60, 60);
 
             // Functions
-            var functionsDefaultPosition = new Vector2(60, 200);
+            var FUNCTIONS_DEFAULT_POSITION = new Vector2(60, 200);
 
             // Settings
-            var UtilsDefaultPosition = new Vector2(1200, 800);
+            var UTILS_DEFAULT_POSITION = new Vector2(1200, 800);
             var isMovingImGui = false;
+
+            // Constants and functions
+            var CONSTANTS_AND_FUNCTIONS_DEFAULT_POSITION = new Vector2(1645, 615);
 
             // Main Loop
             while (!Raylib.WindowShouldClose())
@@ -115,16 +118,19 @@ namespace Simple_Graphing_Calculator
                     rlImGui.Begin();
 
                         // Camera
-                        ImGui.SetNextWindowPos(cameraDefaultPosition, ImGuiCond.FirstUseEver);
+                        ImGui.SetNextWindowPos(CAMERA_DEFAULT_POSITION, ImGuiCond.FirstUseEver);
                         CameraWindow(ref view);
 
                         // Functions
-                        ImGui.SetNextWindowPos(functionsDefaultPosition, ImGuiCond.FirstUseEver);
+                        ImGui.SetNextWindowPos(FUNCTIONS_DEFAULT_POSITION, ImGuiCond.FirstUseEver);
                         FunctionsWindow();
 
                         // Settings
-                        ImGui.SetNextWindowPos(UtilsDefaultPosition, ImGuiCond.FirstUseEver);
+                        ImGui.SetNextWindowPos(UTILS_DEFAULT_POSITION, ImGuiCond.FirstUseEver);
                         UtilsWindow();
+
+                        ImGui.SetNextWindowPos(CONSTANTS_AND_FUNCTIONS_DEFAULT_POSITION, ImGuiCond.FirstUseEver);
+                        KnownConstantsWindow();
 
                     rlImGui.End();
                 Raylib.EndDrawing();
@@ -371,11 +377,25 @@ namespace Simple_Graphing_Calculator
             ImGui.End();
             ImGui.GetIO().FontGlobalScale = fontScale / (CustomFont ? 6 : 1);
         }
+        static void KnownConstantsWindow()
+        {
+            ImGui.Begin("Constants and functions", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize);
+                ImGui.Text("Constants:");
+                ImGui.SameLine();
+                // Whitespace to make window autosize properly
+                ImGui.Text("\t \t \t ");
+                ImGui.Text("π, e");
+                ImGui.Text("Functions:");
+                ImGui.Text("ln, log\nsin, cos, tan\nceil, floor");
+            ImGui.End();
+        }
         static void AddFunction()
         {
-            var newFunc = new Function();
-            newFunc.func = "";
-            newFunc.colour = IsLightMode ? new Vector4(0, 0, 0, 1) : new Vector4(1, 1, 1, 1);
+            var newFunc = new Function
+            {
+                func = "",
+                colour = IsLightMode ? new Vector4(0, 0, 0, 1) : new Vector4(1, 1, 1, 1)
+            };
             for (int i = 0; i <= functions.Count; i++)
             {
                 if (!functions.Any(f => f.ID == i))
