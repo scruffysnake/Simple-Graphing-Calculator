@@ -82,16 +82,16 @@ namespace Simple_Graphing_Calculator
             }
 
             // Camera
-            Vector2 targetDefault = new Vector2(0, 0);
-            Camera2D view = new Camera2D(Offset, targetDefault, 0, DEFAULT_ZOOM);
-            Vector2 cameraDefaultPosition = new Vector2(60, 60);
+            var targetDefault = new Vector2(0, 0);
+            var view = new Camera2D(Offset, targetDefault, 0, DEFAULT_ZOOM);
+            var cameraDefaultPosition = new Vector2(60, 60);
 
             // Functions
-            Vector2 functionsDefaultPosition = new Vector2(60, 200);
+            var functionsDefaultPosition = new Vector2(60, 200);
 
             // Settings
-            Vector2 UtilsDefaultPosition = new Vector2(1200, 800);
-            bool isMovingImGui = false;
+            var UtilsDefaultPosition = new Vector2(1200, 800);
+            var isMovingImGui = false;
 
             // Main Loop
             while (!Raylib.WindowShouldClose())
@@ -159,16 +159,16 @@ namespace Simple_Graphing_Calculator
         static void DrawAxes(ref Camera2D view) 
         {
             // Axes position
-            Vector2 axes = Raylib.GetWorldToScreen2D(new Vector2(0, 0), view);
+            var axes = Raylib.GetWorldToScreen2D(new Vector2(0, 0), view);
 
             // Grid
-            Vector2 bottomRight = Raylib.GetScreenToWorld2D(new Vector2(ResolutionX, ResolutionY), view);
-            Vector2 topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), view);
-            Vector2 nOfLines = bottomRight - topLeft;
+            var bottomRight = Raylib.GetScreenToWorld2D(new Vector2(ResolutionX, ResolutionY), view);
+            var topLeft = Raylib.GetScreenToWorld2D(new Vector2(0, 0), view);
+            var nOfLines = bottomRight - topLeft;
 
             // Colours
-            Color gridColour = ConvertColour(GridColour);
-            Color axesColour = ConvertColour(AxesColour);
+            var gridColour = ConvertColour(GridColour);
+            var axesColour = ConvertColour(AxesColour);
 
             // Vertical
             int spacingX = (int)(ResolutionX / nOfLines.X);
@@ -215,8 +215,8 @@ namespace Simple_Graphing_Calculator
         }
         static void DrawMousePosition(ref Camera2D view)
         {
-            Vector2 screenPos = Raylib.GetMousePosition();
-            Vector2 worldPos = Raylib.GetScreenToWorld2D(screenPos, view);
+            var screenPos = Raylib.GetMousePosition();
+            var worldPos = Raylib.GetScreenToWorld2D(screenPos, view);
 
             string coords = $"{Math.Round(worldPos.X, 1)}, {-Math.Round(worldPos.Y, 1)}";
             int textWidth = Raylib.MeasureText(coords, 30);
@@ -274,20 +274,20 @@ namespace Simple_Graphing_Calculator
 
             Parallel.ForEach(functions, func =>
             {
-                List<IToken> tokens = Calculator.Tokenise(func.func);
+                var tokens = Calculator.Tokenise(func.func);
                 if (tokens.Contains(new Operator(Operators.ERR))) return;
-                Parser parser = new Parser(tokens);
-                IExpression parsedFunction = parser.parse();
+                var parser = new Parser(tokens);
+                var parsedFunction = parser.parse();
 
-                Color color = new Color(
+                var color = new Color(
                     (int)(Math.Clamp(func.colour.X, 0, 1) * 255), 
                     (int)(Math.Clamp(func.colour.Y, 0, 1) * 255), 
                     (int)(Math.Clamp(func.colour.Z, 0, 1) * 255),
                     (int)(Math.Clamp(func.colour.W, 0, 1) * 255));
 
-                Evaluator calculator = new Evaluator();
+                var calculator = new Evaluator();
                 calculator.id = func.ID;
-                Vector2 previousPosition = new Vector2();
+                var previousPosition = new Vector2();
                 bool firstPoint = true;
                 bool isYFunc = func.funcType == FunctionTypes.Y;
                 int resolution = isYFunc ? ResolutionX : ResolutionY;
@@ -329,7 +329,7 @@ namespace Simple_Graphing_Calculator
                 currentFunction.func = Regex.Replace(functions[i].func, @"pi", "π", RegexOptions.IgnoreCase);
                 // Replace x<->y
                 string correctInput = currentFunction.funcType == FunctionTypes.X ? "y" : "x";
-                currentFunction.func = Regex.Replace(functions[i].func, ((char)currentFunction.funcType).ToString(), correctInput, RegexOptions.IgnoreCase);
+                currentFunction.func = Regex.Replace(currentFunction.func, ((char)currentFunction.funcType).ToString(), correctInput, RegexOptions.IgnoreCase);
 
                 if (functions[i].func == currentFunction.func) continue;
                 functions[i] = currentFunction;
